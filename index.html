@@ -159,7 +159,7 @@ select.sel,input.txt{width:100%;border:1.5px solid var(--ink);border-radius:var(
 <div id="busy" hidden><div class="sp"></div><div id="busyMsg">Đang xử lý…</div><div class="pb"><div id="busyBar"></div></div></div>
 <script>
 'use strict';
-var APP_VER='1.9 (31/10/2026)';
+var APP_VER='2.0 (31/10/2026)';
 function $(s,r){return (r||document).querySelector(s)}
 function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
 function clamp(v,a,b){return v<a?a:(v>b?b:v)}
@@ -432,14 +432,20 @@ function boxBlur(src,W,H,r,passes){
 
 /* ===== Làm mịn da: chỉ trong vùng người dùng tô (mask 0..255, 1 byte/điểm) ===== */
 function skinSmooth(src,W,H,amt,mask){
-  var r=Math.max(2,Math.round(W*0.0075)),bl=boxBlur(src,W,H,r,2),out=new Uint8ClampedArray(src);
-  var n=W*H;
+  var r1=Math.max(2,Math.round(W*0.006)),r2=Math.max(4,Math.round(W*0.018)),L1=boxBlur(src,W,H,r1,2),L2=boxBlur(src,W,H,r2,3),out=new Uint8ClampedArray(src),n=W*H;
+  var sg=7+9*amt,tb=new Float32Array(256),t;
+  for(t=0;t<256;t++)tb[t]=Math.exp(-t*t/(2*sg*sg));
+  var tex=1-0.9*amt,mix=0.25+0.65*amt;
   for(var p=0;p<n;p++){
     var m=mask[p];if(!m)continue;
     var i=p*4,R=src[i],G=src[i+1],B=src[i+2];
-    var dy=(0.299*R+0.587*G+0.114*B)-(0.299*bl[i]+0.587*bl[i+1]+0.114*bl[i+2]);
-    var w=EXP16[Math.min(255,Math.abs(dy)|0)],k=(m/255)*amt*(0.3+0.7*w);if(k>1)k=1;
-    out[i]=R+(bl[i]-R)*k;out[i+1]=G+(bl[i+1]-G)*k;out[i+2]=B+(bl[i+2]-B)*k;out[i+3]=255;
+    var dy=(0.299*R+0.587*G+0.114*B)-(0.299*L2[i]+0.587*L2[i+1]+0.114*L2[i+2]);
+    var w=tb[Math.min(255,Math.abs(dy)|0)],k=(m/255)*Math.min(1,w*1.05+0.1*amt);
+    for(var c=0;c<3;c++){
+      var base=L1[i+c]+(L2[i+c]-L1[i+c])*mix,tg=base+(src[i+c]-L1[i+c])*tex;
+      out[i+c]=src[i+c]+(tg-src[i+c])*k;
+    }
+    out[i+3]=255;
   }
   return out;
 }
@@ -814,6 +820,65 @@ function dilateMask(m,W,H,d){
     cur=nx;
   }
   return cur;
+}
+
+/* ===== Hòa màu và hạt cho vùng vừa tô vá, khớp với vùng lân cận không chọn ===== */
+function harmonize(fill,orig,mask,W,H){
+  var n=W*H,i,p,c,C=new Float32Array(n*3),fixed=new Uint8Array(n),inner=[];
+  for(p=0;p<n;p++){
+    if(!mask[p])continue;
+    var x=p%W,y=(p/W)|0,cnt=0,sr=0,sg=0,sb=0,q;
+    if(x>0&&!mask[q=p-1]){cnt++;sr+=orig[q*4];sg+=orig[q*4+1];sb+=orig[q*4+2]}
+    if(x<W-1&&!mask[q=p+1]){cnt++;sr+=orig[q*4];sg+=orig[q*4+1];sb+=orig[q*4+2]}
+    if(y>0&&!mask[q=p-W]){cnt++;sr+=orig[q*4];sg+=orig[q*4+1];sb+=orig[q*4+2]}
+    if(y<H-1&&!mask[q=p+W]){cnt++;sr+=orig[q*4];sg+=orig[q*4+1];sb+=orig[q*4+2]}
+    if(cnt){fixed[p]=1;C[p*3]=sr/cnt-fill[p*4];C[p*3+1]=sg/cnt-fill[p*4+1];C[p*3+2]=sb/cnt-fill[p*4+2]}
+    else inner.push(p);
+  }
+  if(!inner.length&&!n)return fill;
+  /* giá trị khởi đầu: trung bình các điểm biên */
+  var m0=[0,0,0],nf=0;
+  for(p=0;p<n;p++)if(fixed[p]){m0[0]+=C[p*3];m0[1]+=C[p*3+1];m0[2]+=C[p*3+2];nf++}
+  if(!nf)return fill;
+  for(c=0;c<3;c++)m0[c]/=nf;
+  for(i=0;i<inner.length;i++){p=inner[i];C[p*3]=m0[0];C[p*3+1]=m0[1];C[p*3+2]=m0[2]}
+  /* nội suy điều hòa (Laplace) bằng Gauss-Seidel quá tay */
+  var om=1.85,it,len=inner.length;
+  for(it=0;it<260;it++){
+    for(i=0;i<len;i++){
+      p=inner[i];var x2=p%W,s0=0,s1=0,s2=0,k=0,q2;
+      if(x2>0&&mask[q2=p-1]){s0+=C[q2*3];s1+=C[q2*3+1];s2+=C[q2*3+2];k++}
+      if(x2<W-1&&mask[q2=p+1]){s0+=C[q2*3];s1+=C[q2*3+1];s2+=C[q2*3+2];k++}
+      if(p>=W&&mask[q2=p-W]){s0+=C[q2*3];s1+=C[q2*3+1];s2+=C[q2*3+2];k++}
+      if(p<n-W&&mask[q2=p+W]){s0+=C[q2*3];s1+=C[q2*3+1];s2+=C[q2*3+2];k++}
+      if(!k)continue;
+      C[p*3]+=om*(s0/k-C[p*3]);C[p*3+1]+=om*(s1/k-C[p*3+1]);C[p*3+2]+=om*(s2/k-C[p*3+2]);
+    }
+  }
+  var out=new Uint8ClampedArray(fill);
+  for(p=0;p<n;p++)if(mask[p]){out[p*4]=fill[p*4]+C[p*3];out[p*4+1]=fill[p*4+1]+C[p*3+1];out[p*4+2]=fill[p*4+2]+C[p*3+2]}
+  /* khớp độ hạt: so độ nhiễu cao tần ở vành ngoài và trong vùng vá */
+  function hf(a,q){var l=0.299*a[q*4]+0.587*a[q*4+1]+0.114*a[q*4+2],s=0,k=0;
+    for(var dy=-1;dy<=1;dy++)for(var dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;var xx=(q%W)+dx,yy=((q/W)|0)+dy;if(xx<0||yy<0||xx>=W||yy>=H)continue;var r=yy*W+xx;s+=0.299*a[r*4]+0.587*a[r*4+1]+0.114*a[r*4+2];k++}
+    return l-s/k}
+  var ring=new Uint8Array(n),rd=Math.max(6,Math.round(Math.max(W,H)*0.03)),cur=mask,k2;
+  var near=mask;for(k2=0;k2<rd;k2++)near=dilateMask(near,W,H,1);
+  var sR=0,nR=0,sF=0,nF=0;
+  for(p=0;p<n;p++){
+    if(mask[p]){var x3=p%W,y3=(p/W)|0;if(x3>1&&y3>1&&x3<W-2&&y3<H-2){var e=hf(out,p);sF+=e*e;nF++}}
+    else if(near[p]){var x4=p%W,y4=(p/W)|0;if(x4>1&&y4>1&&x4<W-2&&y4<H-2){var e2=hf(orig,p);sR+=e2*e2;nR++}}
+  }
+  if(nR>50&&nF>50){
+    var sdR=Math.sqrt(sR/nR),sdF=Math.sqrt(sF/nF);
+    if(sdR>sdF+0.3){
+      var add=Math.sqrt(sdR*sdR-sdF*sdF)*0.95;
+      for(p=0;p<n;p++)if(mask[p]){
+        var g=(fxh(p%W,(p/W)|0,77)+fxh((p/W)|0,p%W,78)-1)*add*1.6;
+        out[p*4]+=g;out[p*4+1]+=g;out[p*4+2]+=g;
+      }
+    }
+  }
+  return out;
 }
 /* ===== Tài liệu ảnh, lịch sử, vẽ lên màn hình, xuất ảnh ===== */
 var PMAX=1280;
@@ -1517,15 +1582,16 @@ async function doErase(){
     var mrc=cv(sw,sh),mrx=mrc.getContext('2d');mrx.drawImage(mc,rx0,ry0,rw,rh,0,0,sw,sh);
     var md2=mrx.getImageData(0,0,sw,sh).data,mask=new Uint8Array(sw*sh),i;
     for(i=0;i<sw*sh;i++)mask[i]=md2[i*4+3]>40?1:0;
-    mask=dilateMask(mask,sw,sh,Math.max(2,Math.round(Math.max(sw,sh)*0.006)));
+    mask=dilateMask(mask,sw,sh,Math.max(3,Math.round(Math.max(sw,sh)*0.009)));
     var res=await runInpaint(new Uint8ClampedArray(rgba),mask,sw,sh,busyP);
+    try{res=harmonize(res,rgba,mask,sw,sh)}catch(e5){}
     /* ghép lại ở độ phân giải gốc, viền mềm 2px */
     var oc=cv(sw,sh);oc.getContext('2d').putImageData(new ImageData(res,sw,sh),0,0);
     var fc=cv(rw,rh),fx=fc.getContext('2d');fx.imageSmoothingQuality='high';fx.drawImage(oc,0,0,rw,rh);
     var fd=fx.getImageData(0,0,rw,rh).data,orig=b.getContext('2d').getImageData(rx0,ry0,rw,rh),od=orig.data;
     var fm=new Uint8Array(rw*rh),mfull=mx.getImageData(rx0,ry0,rw,rh).data;
     for(i=0;i<rw*rh;i++)fm[i]=mfull[i*4+3]>40?1:0;
-    fm=dilateMask(fm,rw,rh,Math.max(2,Math.round(Math.max(sw,sh)*0.006/f)));
+    fm=dilateMask(fm,rw,rh,Math.max(3,Math.round(Math.max(sw,sh)*0.009/f)));
     var sm=new Uint8ClampedArray(rw*rh*4);
     for(i=0;i<rw*rh;i++){var v=fm[i]?255:0;sm[i*4]=sm[i*4+1]=sm[i*4+2]=v;sm[i*4+3]=255}
     var bl=boxBlur(sm,rw,rh,2,1);
