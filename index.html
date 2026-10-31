@@ -159,7 +159,7 @@ select.sel,input.txt{width:100%;border:1.5px solid var(--ink);border-radius:var(
 <div id="busy" hidden><div class="sp"></div><div id="busyMsg">Đang xử lý…</div><div class="pb"><div id="busyBar"></div></div></div>
 <script>
 'use strict';
-var APP_VER='1.7 (31/10/2026)';
+var APP_VER='1.8 (31/10/2026)';
 function $(s,r){return (r||document).querySelector(s)}
 function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
 function clamp(v,a,b){return v<a?a:(v>b?b:v)}
@@ -1354,14 +1354,15 @@ PANELS.beauty=function(){
 };
 var FXL=[['burn','Cháy film'],['leak','Lóa sáng'],['glow','Glow'],['noise','Noise'],['vhs','VHS'],['dust','Bụi xước'],['rec','REC'],['date','Dấu ngày']];
 PANELS.more=function(){
-  var fx=doc.p.fx,h='<div class="chips">';
+  var fx=doc.p.fx,h='<div class="chips" id="xstrip">';
   FXL.forEach(function(x){h+='<button class="chip'+(ui.fx===x[0]?' on':'')+(fx[x[0]]>0&&ui.fx!==x[0]?' dot':'')+'" data-act="fxSel" data-v="'+x[0]+'">'+x[1]+'</button>'});
   h+='</div>'+rng('p.fx.'+ui.fx,'Mức',0,100,1,1,0);
   h+='<div class="row"><button class="bt sm" data-act="fxSeed">Đổi kiểu</button><button class="bt sm" data-act="fxOff">Tắt hết</button><button class="bt sm pri" data-act="colOpen">Ghép nhiều ảnh</button></div>';
   return h;
 };
-ACT.fxSel=function(v){
-  var fx=doc.p.fx;
+ACT.fxSel=function(v,el){
+  var fx=doc.p.fx,strip=$('#xstrip');
+  if(strip&&el&&el.nextElementSibling)ui.fs={id:'xstrip',left:strip.scrollLeft,d:el.nextElementSibling.offsetLeft-el.offsetLeft};else ui.fs=null;
   if(ui.fx===v&&fx[v]>0){fx[v]=0}else{ui.fx=v;if(!fx[v])fx[v]=60}
   commit();modelChanged();
 };
@@ -1388,11 +1389,11 @@ function refreshPanel(){
   var p=$('#panel'),st=p.scrollTop;
   if(!doc.base){p.hidden=false;p.innerHTML='<div class="hint" style="padding:10px 0;text-align:center">Chọn một ảnh để bắt đầu chỉnh sửa.</div>';return}
   p.hidden=ui.tab==='none';if(p.hidden)return;
-  var fo=$('#fstrip'),keep=fo&&ui.tab==='film'&&ui.fcKeep===ui.fc?fo.scrollLeft:0;
+  var fo=$('#fstrip')||$('#xstrip'),fid=fo?fo.id:'',key=ui.tab+'|'+ui.fc,keep=fo&&ui.fkey===key?fo.scrollLeft:0;
   p.innerHTML=PANELS[ui.tab]();p.scrollTop=st;fillThumbs();
-  var fn=$('#fstrip');ui.fcKeep=ui.fc;
+  var fn=$('#fstrip')||$('#xstrip');ui.fkey=ui.tab+'|'+ui.fc;
   if(fn){
-    if(ui.fs){var L=ui.fs.left,d=ui.fs.d;ui.fs=null;fn.scrollLeft=L;requestAnimationFrame(function(){try{fn.scrollTo({left:L+d,behavior:'smooth'})}catch(e){fn.scrollLeft=L+d}})}
+    if(ui.fs&&ui.fs.id===fn.id){var L=ui.fs.left,d=ui.fs.d;ui.fs=null;fn.scrollLeft=L;requestAnimationFrame(function(){try{fn.scrollTo({left:L+d,behavior:'smooth'})}catch(e){fn.scrollLeft=L+d}})}
     else if(keep)fn.scrollLeft=keep;
   }
 }
@@ -1727,7 +1728,7 @@ ACT.sclear=function(){if(!doc.p.beauty.st.length)return false;doc.p.beauty.st=[]
 ACT.filmCat=function(v){ui.fc=+v;ui.fs=null};
 ACT.filmPick=function(v,el){
   var a=v.split(':'),f=doc.p.film,strip=$('#fstrip');
-  if(strip&&el&&el.nextElementSibling)ui.fs={left:strip.scrollLeft,d:el.nextElementSibling.offsetLeft-el.offsetLeft};
+  if(strip&&el&&el.nextElementSibling)ui.fs={id:'fstrip',left:strip.scrollLeft,d:el.nextElementSibling.offsetLeft-el.offsetLeft};
   else ui.fs=null;
   if(+a[1]<0){f.i=-1}else{f.c=+a[0];f.i=+a[1]}
   commit();modelChanged();
