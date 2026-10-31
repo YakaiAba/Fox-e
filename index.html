@@ -159,7 +159,7 @@ select.sel,input.txt{width:100%;border:1.5px solid var(--ink);border-radius:var(
 <div id="busy" hidden><div class="sp"></div><div id="busyMsg">Đang xử lý…</div><div class="pb"><div id="busyBar"></div></div></div>
 <script>
 'use strict';
-var APP_VER='1.8 (31/10/2026)';
+var APP_VER='1.9 (31/10/2026)';
 function $(s,r){return (r||document).querySelector(s)}
 function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
 function clamp(v,a,b){return v<a?a:(v>b?b:v)}
@@ -1832,12 +1832,12 @@ $('#bRedo').addEventListener('click',redo);
 $('#bSave').addEventListener('click',function(){
   if(!doc.base){toast('Chưa có ảnh để lưu');return}
   var fmt=LOCAL.fmt,q=LOCAL.q;
-  dialog('<h3>Lưu ảnh</h3><div class="chips" id="fmtChips"><button class="chip'+(fmt==='jpg'?' on':'')+'" data-f="jpg">JPEG (nhẹ)</button><button class="chip'+(fmt==='png'?' on':'')+'" data-f="png">PNG (không nén)</button></div>'+
-    '<div class="sl"><div class="sh"><span>Chất lượng JPEG</span><b id="qv">'+Math.round(q*100)+'</b></div><input type="range" id="qr" min="60" max="100" value="'+Math.round(q*100)+'"></div>'+
+  dialog('<h3>Lưu ảnh</h3><div class="chips" id="fmtChips"><button class="chip'+(fmt==='jpg'?' on':'')+'" data-f="jpg">JPG</button><button class="chip'+(fmt==='png'?' on':'')+'" data-f="png">PNG</button></div>'+
+    '<div class="sl"><span class="sn">Chất lượng</span><input type="range" id="qr" min="60" max="100" value="'+Math.round(q*100)+'"'+(fmt==='png'?' disabled':'')+'><b id="qv">'+(fmt==='png'?100:Math.round(q*100))+'</b></div>'+
     '<p class="hint">Ảnh xuất theo kích thước đang làm việc ('+doc.base.width+'×'+doc.base.height+' px, chưa tính khung). Trong bảng hiện ra, chọn “Lưu hình ảnh” để vào thư viện Ảnh.</p>'+
     '<div class="dbtn"><button class="bt" data-r="0">Bỏ qua</button><button class="bt pri" data-r="1">Lưu</button></div>',
     function(m){
-      m.addEventListener('click',function(e){var c=e.target.closest('[data-f]');if(c){fmt=c.getAttribute('data-f');$$('#fmtChips .chip',m).forEach(function(x){x.classList.toggle('on',x===c)})}});
+      m.addEventListener('click',function(e){var c=e.target.closest('[data-f]');if(c){fmt=c.getAttribute('data-f');$$('#fmtChips .chip',m).forEach(function(x){x.classList.toggle('on',x===c)});var qr=m.querySelector('#qr');qr.disabled=fmt==='png';m.querySelector('#qv').textContent=fmt==='png'?100:qr.value}});
       m.querySelector('#qr').addEventListener('input',function(e){q=Number(e.target.value)/100;m.querySelector('#qv').textContent=e.target.value});
     }).then(function(r){
       if(r.v!=='1')return;
