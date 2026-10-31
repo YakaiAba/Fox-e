@@ -159,7 +159,7 @@ select.sel,input.txt{width:100%;border:1.5px solid var(--ink);border-radius:var(
 <div id="busy" hidden><div class="sp"></div><div id="busyMsg">Đang xử lý…</div><div class="pb"><div id="busyBar"></div></div></div>
 <script>
 'use strict';
-var APP_VER='2.1 (31/10/2026)';
+var APP_VER='2.2 (31/10/2026)';
 function $(s,r){return (r||document).querySelector(s)}
 function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
 function clamp(v,a,b){return v<a?a:(v>b?b:v)}
@@ -1020,8 +1020,9 @@ function drawSkinStrokes(c,W,H,st,color){
   });
   c.globalCompositeOperation='source-over';
 }
+function hasPaint(st){return !!st&&st.some(function(q){return !q.e})}
 function skinMask(W,H,st){
-  var c=cv(W,H),x=c.getContext('2d');drawSkinStrokes(x,W,H,st,'#fff');
+  var c=cv(W,H),x=c.getContext('2d');if(!hasPaint(st)){x.fillStyle='#fff';x.fillRect(0,0,W,H)}drawSkinStrokes(x,W,H,st,'#fff');
   var d=x.getImageData(0,0,W,H).data,g=new Uint8ClampedArray(W*H*4),i;
   for(i=0;i<W*H;i++){var v=d[i*4+3];g[i*4]=g[i*4+1]=g[i*4+2]=v;g[i*4+3]=255}
   var bl=boxBlur(g,W,H,Math.max(1,Math.round(W*0.004)),2),m=new Uint8Array(W*H);
@@ -1031,8 +1032,8 @@ function skinMask(W,H,st){
 var SKZ=null;
 function drawSkinZone(c,W,H){
   var pv=getPV();
-  var w=skinProb(pv.data,pv.w,pv.h),n=pv.w*pv.h,id=new ImageData(pv.w,pv.h),d=id.data;
-  for(var p=0;p<n;p++){d[p*4]=60;d[p*4+1]=200;d[p*4+2]=120;d[p*4+3]=w[p]*150}
+  var w=skinProb(pv.data,pv.w,pv.h),n=pv.w*pv.h,id=new ImageData(pv.w,pv.h),d=id.data,st=doc.p.beauty.st,mk=st.length?skinMask(pv.w,pv.h,st):null;
+  for(var p=0;p<n;p++){d[p*4]=60;d[p*4+1]=200;d[p*4+2]=120;d[p*4+3]=w[p]*(mk?mk[p]/255:1)*150}
   if(!SKZ)SKZ=document.createElement('canvas');SKZ.width=pv.w;SKZ.height=pv.h;SKZ.getContext('2d').putImageData(id,0,0);
   c.drawImage(SKZ,0,0,W,H);
 }
@@ -1045,7 +1046,7 @@ function drawSkinRed(c,W,H,st){
 }
 function pipe(src,W,H,p,useCache){
   var s=src,b=p.beauty,a=p.adj,c=useCache?PIPE:{};
-  var hs=b.skin>0&&b.st&&b.st.length,ht=(b.tone|0)>0;
+  var hs=b.skin>0&&hasPaint(b.st),ht=(b.tone|0)>0;
   if((hs||ht)&&!(useCache&&ui.tab==='beauty'&&ui.bmode!=='view')){
     var k1=doc.ver+'|'+b.skin+'|'+(b.tone|0)+'|'+JSON.stringify(b.st);
     if(useCache&&c.k1===k1)s=c.d1;
@@ -1263,6 +1264,11 @@ function drawOv(){
   }else if(ui.tab==='beauty'){
     if(ui.bmode!=='view'&&doc.p.beauty.st.length)drawSkinRed(c,W,H,doc.p.beauty.st);
     if(ui.skinv)drawSkinZone(c,W,H);
+    if(ui.bpos&&ui.bmode!=='view'){
+      var u2=W/($('#view').width||W),r=ui.bbrush/100*W/2,bc=ui.bcur;
+      if(bc&&bc.e&&bc.pts.length>1){c.save();c.lineCap=c.lineJoin='round';c.strokeStyle='rgba(255,255,255,.45)';c.lineWidth=Math.max(1,bc.w*W);c.beginPath();c.moveTo(bc.pts[0][0]*W,bc.pts[0][1]*H);for(var q=1;q<bc.pts.length;q++)c.lineTo(bc.pts[q][0]*W,bc.pts[q][1]*H);c.stroke();c.restore()}
+      c.save();c.lineWidth=Math.max(1.5,2*u2);c.strokeStyle=ui.bmode==='erase'?'#fff':'#B23A2A';if(ui.bmode==='erase')c.setLineDash([5*u2,4*u2]);c.beginPath();c.arc(ui.bpos[0]*W,ui.bpos[1]*H,Math.max(2,r),0,6.2832);c.stroke();c.restore();
+    }
   }
 }
 
@@ -1477,7 +1483,7 @@ PANELS.beauty=function(){
   var h='<div class="chips">'+chipU('bmode','paint','<span class="brush"></span>Tô vùng',ui.bmode)+chipU('bmode','erase','Tẩy vùng tô',ui.bmode)+chipU('bmode','view','Xem kết quả',ui.bmode)+'</div>';
   h+=rng('p.beauty.skin','Độ mịn da',0,100,1,1,60)+rng('p.beauty.tone','Đều màu da',0,100,1,1,0)+rng('u.bbrush','Cỡ bút',1,15,0.5,1,5);
   h+='<div class="row"><button class="bt sm" data-act="sundo"'+(n?'':' disabled')+'>Xóa nét cuối</button><button class="bt sm'+(ui.skinv?' pri':'')+'" data-act="skinv">Vùng da</button><button class="bt sm red" data-act="sclear"'+(n?'':' disabled')+'>Xóa hết vùng tô</button></div>';
-  h+='<div class="hint">'+(ui.bmode==='view'?'Đang xem kết quả, vùng tô được ẩn. Hai ngón để phóng to, kéo để di chuyển.':'Tô vùng da để làm mịn; “Đều màu da” tự nhận biết da (không tô thì áp cho cả ảnh). Vùng đã tô hiện màu gạch đỏ. Tránh tô mắt, môi, lông mày để giữ nét. Chọn “Xem kết quả” để kiểm tra.')+'</div>';
+  h+='<div class="hint">'+(ui.bmode==='view'?'Đang xem kết quả, vùng tô được ẩn. Hai ngón để phóng to, kéo để di chuyển.':'Tô vùng da để làm mịn. “Đều màu da” tự nhận biết da; bật “Vùng da” để xem, rồi “Tẩy vùng tô” để loại chỗ chọn sai (không tô thì áp cả ảnh). Vùng đã tô hiện màu gạch đỏ. Tránh tô mắt, môi, lông mày để giữ nét. Chọn “Xem kết quả” để kiểm tra.')+'</div>';
   return h;
 };
 var FXL=[['burn','Cháy film'],['leak','Lóa sáng'],['glow','Glow'],['noise','Noise'],['vhs','VHS'],['dust','Bụi xước'],['rec','REC'],['date','Dấu ngày']];
@@ -1717,16 +1723,16 @@ TOOLS.beauty={
   down:function(p){
     var v=$('#view'),w=ui.bbrush/100;
     ui.bcur={e:ui.bmode==='erase'?1:0,w:w,pts:[[p.x/v.width,p.y/v.height]]};
-    doc.p.beauty.st.push(ui.bcur);scheduleRender(true);
+    doc.p.beauty.st.push(ui.bcur);ui.bpos=ui.bcur.pts[0];scheduleRender(true);
   },
   move:function(p){
     var s=ui.bcur,v=$('#view');if(!s)return;
     var l=s.pts[s.pts.length-1],q=[p.x/v.width,p.y/v.height];
     if(Math.hypot((q[0]-l[0])*v.width,(q[1]-l[1])*v.height)<1.5)return;
-    s.pts.push(q);scheduleRender(true);
+    s.pts.push(q);ui.bpos=q;scheduleRender(true);
   },
-  up:function(){var s=ui.bcur;if(!s)return;ui.bcur=null;commit();refreshPanel();scheduleRender()},
-  cancel:function(){if(ui.bcur){doc.p.beauty.st.pop();ui.bcur=null;scheduleRender(true)}}
+  up:function(){var s=ui.bcur;if(!s)return;ui.bcur=null;ui.bpos=null;commit();refreshPanel();scheduleRender()},
+  cancel:function(){if(ui.bcur){doc.p.beauty.st.pop();ui.bcur=null;ui.bpos=null;scheduleRender(true)}}
 };
 TOOLS.crop={
   down:function(p){var c=ui.crop;if(!c||!c.rect)return;var h=hitCrop(p);c.drag=h?{h:h,p:p,r:Object.assign({},c.rect)}:null},
