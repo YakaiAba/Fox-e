@@ -159,7 +159,7 @@ select.sel,input.txt{width:100%;border:1.5px solid var(--ink);border-radius:var(
 <div id="busy" hidden><div class="sp"></div><div id="busyMsg">Đang xử lý…</div><div class="pb"><div id="busyBar"></div></div></div>
 <script>
 'use strict';
-var APP_VER='1.6 (31/10/2026)';
+var APP_VER='1.7 (31/10/2026)';
 function $(s,r){return (r||document).querySelector(s)}
 function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
 function clamp(v,a,b){return v<a?a:(v>b?b:v)}
@@ -328,6 +328,7 @@ var FILM=FILM_RAW.map(function(c){
     return o;
   })};
 });
+FILM.unshift({id:'all',name:'Tất cả',list:FILM.reduce(function(a,c){return a.concat(c.list)},[])});
 function filmOf(f){return f&&f.i>=0&&FILM[f.c]?(FILM[f.c].list[f.i]||null):null}
 
 /* Gộp thông số chỉnh tay + film thành một bộ */
@@ -517,6 +518,114 @@ function colorPass(src,W,H,q,M){
     if(++px===W){px=0;py++}
   }
   return out;
+}
+
+/* ===== Hiệu ứng retro (cố định theo hạt giống nên xem trước và xuất ảnh giống nhau) ===== */
+function fxh(x,y,s){var h=(Math.imul(x|0,374761393)+Math.imul(y|0,668265263)+Math.imul(s|0,1274126177))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return (h>>>0)/4294967296}
+function fxn(x,y,s){
+  var xi=Math.floor(x),yi=Math.floor(y),fx=x-xi,fy=y-yi;fx=fx*fx*(3-2*fx);fy=fy*fy*(3-2*fy);
+  var a=fxh(xi,yi,s),b=fxh(xi+1,yi,s),c=fxh(xi,yi+1,s),d=fxh(xi+1,yi+1,s);
+  return a+(b-a)*fx+(c-a)*fy+(a-b-c+d)*fx*fy;
+}
+function fxScreen(o,i,r,g,b){o[i]=255-(255-o[i])*(1-r);o[i+1]=255-(255-o[i+1])*(1-g);o[i+2]=255-(255-o[i+2])*(1-b)}
+function glowPass(o,W,H,a){
+  var bl=boxBlur(o,W,H,Math.max(2,Math.round(W*0.02)),2),n=W*H,t=[1,0.82,0.66];
+  for(var p=0;p<n;p++){var i=p*4;
+    for(var c=0;c<3;c++){
+      var v=bl[i+c],hl=v>105?(v-105)/150:0;
+      o[i+c]=Math.min(255,o[i+c]*(1-0.22*a)+v*0.22*a+hl*a*150*t[c]);
+    }
+  }
+}
+function leakPass(o,W,H,a,s){
+  var A={x:fxh(1,1,s)<0.5?0:W,y:H*(0.12+0.6*fxh(2,2,s)),r:W*(0.4+0.35*a),c:[1,0.42,0.1]};
+  var B={x:W*(0.2+0.6*fxh(3,3,s)),y:fxh(4,4,s)<0.5?0:H,r:W*(0.3+0.3*a),c:[1,0.2,0.4]};
+  for(var y=0;y<H;y++)for(var x=0;x<W;x++){
+    var i=(y*W+x)*4,dA=Math.hypot(x-A.x,y-A.y)/A.r,dB=Math.hypot(x-B.x,y-B.y)/B.r,fA=dA<1?1-dA:0,fB=dB<1?1-dB:0;
+    if(!fA&&!fB)continue;
+    fA=fA*fA*(3-2*fA)*a*1.1;fB=fB*fB*(3-2*fB)*a*0.8;
+    fxScreen(o,i,Math.min(1,A.c[0]*fA+B.c[0]*fB),Math.min(1,A.c[1]*fA+B.c[1]*fB),Math.min(1,A.c[2]*fA+B.c[2]*fB));
+  }
+}
+var BURNLUT=null;
+function burnLut(){
+  if(BURNLUT)return BURNLUT;
+  var st=[[0,120,20,5],[0.35,230,60,15],[0.65,255,150,40],[0.9,255,235,170],[1,255,255,240]],L=new Float32Array(256*3);
+  for(var i=0;i<256;i++){var t=i/255,k=0;while(k<st.length-2&&t>st[k+1][0])k++;var u=(t-st[k][0])/(st[k+1][0]-st[k][0]);u=Math.max(0,Math.min(1,u));
+    for(var c=0;c<3;c++)L[i*3+c]=(st[k][c+1]+(st[k+1][c+1]-st[k][c+1])*u)/255}
+  return BURNLUT=L;
+}
+function burnPass(o,W,H,a,s){
+  var side=((s%4)+4)%4,w=0.05+0.32*a,L=burnLut();
+  for(var y=0;y<H;y++)for(var x=0;x<W;x++){
+    var u,e;
+    if(side===0){e=x/W;u=y/H}else if(side===1){e=1-x/W;u=y/H}else if(side===2){e=y/H;u=x/W}else{e=1-y/H;u=x/W}
+    if(e>w*1.5)continue;
+    var n=fxn(u*7,e*3,s)*0.6+fxn(u*19,e*7,s+9)*0.4,t=1-(e+(n-0.5)*0.26*(0.4+a))/w;
+    if(t<=0)continue;if(t>1)t=1;
+    var k=(t*255)|0,aa=Math.min(1,t*1.7),i=(y*W+x)*4;
+    fxScreen(o,i,L[k*3]*aa,L[k*3+1]*aa,L[k*3+2]*aa);
+  }
+}
+function noisePass(o,W,H,a,s){
+  var sig=a*70,bk=Math.max(1,Math.round(W/900));
+  for(var y=0;y<H;y++){var by=(y/bk)|0;
+    for(var x=0;x<W;x++){
+      var bx=(x/bk)|0,i=(y*W+x)*4,n=(fxh(bx,by,s)+fxh(by,bx,s+1)-1)*sig,cr=(fxh(bx,by,s+2)-0.5)*sig*0.45,cb=(fxh(bx,by,s+3)-0.5)*sig*0.45;
+      o[i]+=n+cr;o[i+1]+=n;o[i+2]+=n+cb;
+    }
+  }
+}
+function dustPass(o,W,H,a,s){
+  var N=Math.round(W*H/160000*(0.3+a*2.4)),k,x,y,dx,dy;
+  for(k=0;k<N;k++){
+    var cx=fxh(k,1,s+20)*W,cy=fxh(k,2,s+20)*H,r=W*(0.0005+0.0017*fxh(k,3,s+20)*fxh(k,3,s+20)),white=fxh(k,4,s+20)<0.7,al=0.45+0.5*fxh(k,5,s+20),v=white?255:20;
+    for(dy=-Math.ceil(r);dy<=Math.ceil(r);dy++)for(dx=-Math.ceil(r);dx<=Math.ceil(r);dx++){
+      if(dx*dx+dy*dy>r*r+0.3)continue;x=Math.round(cx+dx);y=Math.round(cy+dy);if(x<0||y<0||x>=W||y>=H)continue;
+      var i=(y*W+x)*4;o[i]+=(v-o[i])*al;o[i+1]+=(v-o[i+1])*al;o[i+2]+=(v-o[i+2])*al;
+    }
+  }
+  var M=Math.round(1+a*5),lw=Math.max(1,Math.round(W/1400));
+  for(k=0;k<M;k++){
+    var sx=fxh(k,6,s+30)*W,sy=fxh(k,7,s+30)*H*0.6,len=H*(0.15+0.5*fxh(k,8,s+30)),al2=0.25+0.3*fxh(k,9,s+30),ph=fxh(k,10,s+30)*6.28;
+    for(y=Math.round(sy);y<Math.min(H,sy+len);y++){
+      var xx=Math.round(sx+Math.sin(y*0.01+ph)*W*0.004);
+      for(dx=0;dx<lw;dx++){var xi=xx+dx;if(xi<0||xi>=W)continue;var i2=(y*W+xi)*4;o[i2]+=(255-o[i2])*al2;o[i2+1]+=(255-o[i2+1])*al2;o[i2+2]+=(255-o[i2+2])*al2}
+    }
+  }
+}
+function vhsPass(o,W,H,a,s){
+  var out=new Uint8ClampedArray(o.length),ds=Math.max(1,Math.round(W*0.007*a)),ty=Math.floor(H*(0.82+0.1*fxh(5,5,s))),th=Math.max(4,Math.round(H*0.035)),per=Math.max(2,Math.round(H/420));
+  for(var y=0;y<H;y++){
+    var off=Math.sin(y*0.05+s)*W*0.0016*a;
+    if(fxh(y>>4,3,s)>0.93-0.05*a)off+=(fxh(y,4,s)-0.5)*W*0.03*a;
+    var tr=y>=ty&&y<ty+th;
+    if(tr)off+=(fxh(y,6,s)-0.35)*W*0.06*a;
+    off=Math.round(off);
+    var sc=((y/per)|0)%2?1-0.2*a:1,row=y*W;
+    for(var x=0;x<W;x++){
+      var xg=x+off,xr=xg+ds,xb=xg-ds;
+      xg=xg<1?1:(xg>W-2?W-2:xg);xr=xr<1?1:(xr>W-2?W-2:xr);xb=xb<1?1:(xb>W-2?W-2:xb);
+      var r=(o[(row+xr-1)*4]+2*o[(row+xr)*4]+o[(row+xr+1)*4])/4,g=(o[(row+xg-1)*4+1]+2*o[(row+xg)*4+1]+o[(row+xg+1)*4+1])/4,b=(o[(row+xb-1)*4+2]+2*o[(row+xb)*4+2]+o[(row+xb+1)*4+2])/4;
+      var l=0.299*r+0.587*g+0.114*b,ds2=0.2*a;
+      r+=(l-r)*ds2;g+=(l-g)*ds2;b+=(l-b)*ds2;
+      var nz=(fxh(x,y,s+5)-0.5)*40*a+(tr?(fxh(x,y,s+6)-0.3)*150*a:0),lift=12*a;
+      var i=(row+x)*4;
+      out[i]=(r*sc)*(1-0.08*a)+lift+nz;out[i+1]=(g*sc)*(1-0.08*a)+lift+nz;out[i+2]=(b*sc)*(1-0.04*a)+lift+nz+4*a;out[i+3]=255;
+    }
+  }
+  return out;
+}
+function fxPass(o,W,H,f){
+  if(!f||!(f.glow||f.vhs||f.leak||f.burn||f.noise||f.dust))return o;
+  var s=f.seed|0;
+  if(f.glow>0)glowPass(o,W,H,f.glow/100);
+  if(f.vhs>0)o=vhsPass(o,W,H,f.vhs/100,s);
+  if(f.leak>0)leakPass(o,W,H,f.leak/100,s);
+  if(f.burn>0)burnPass(o,W,H,f.burn/100,s);
+  if(f.noise>0)noisePass(o,W,H,f.noise/100,s);
+  if(f.dust>0)dustPass(o,W,H,f.dust/100,s);
+  return o;
 }
 /* ===== Xóa vật thể: tô vá theo mẫu (PatchMatch nhiều tầng), chạy trong Web Worker ===== */
 /* Hàm này phải tự đủ: không dùng biến ngoài, vì được chép sang Worker bằng toString() */
@@ -717,6 +826,7 @@ function defP(){
     film:{c:0,i:-1,t:1},
     match:null,
     beauty:{skin:60,st:[]},
+    fx:{burn:0,leak:0,noise:0,glow:0,vhs:0,dust:0,rec:0,date:0,seed:7},
     frame:{style:'none',w:0.04,color:'#ffffff',bottom:0,radius:0,shadow:false,ratio:'orig'},
     wm:defWM()
   };
@@ -826,7 +936,38 @@ function pipe(src,W,H,p,useCache){
   }else if(useCache)c.k2=null;
   var M=null;
   if(p.match&&p.match.on&&p.match.t>0)M=useCache?getMatch(p.match):buildMatch(p.match,targetStats());
-  return colorPass(s,W,H,combine(p),M);
+  return fxPass(colorPass(s,W,H,combine(p),M),W,H,p.fx);
+}
+
+/* ----- REC, dấu ngày, chữ VHS: vẽ trên ảnh, kích thước theo chiều rộng ----- */
+function drawFxOverlay(ctx,W,H,f){
+  if(!f||!(f.rec||f.date||f.vhs))return;
+  var u=W/400,mono='"SF Mono",Menlo,Consolas,"Courier New",monospace',d=new Date(),pad=function(n){return (n<10?'0':'')+n},sd=(f.seed|0)%50;
+  ctx.save();ctx.textBaseline='middle';
+  if(f.rec>0){
+    ctx.globalAlpha=0.35+0.65*f.rec/100;var m=18*u,L=22*u;
+    ctx.strokeStyle='#fff';ctx.lineWidth=1.6*u;ctx.lineCap='square';ctx.beginPath();
+    [[m,m,1,1],[W-m,m,-1,1],[m,H-m,1,-1],[W-m,H-m,-1,-1]].forEach(function(c){ctx.moveTo(c[0],c[1]+c[3]*L);ctx.lineTo(c[0],c[1]);ctx.lineTo(c[0]+c[2]*L,c[1])});
+    ctx.moveTo(W/2-7*u,H/2);ctx.lineTo(W/2+7*u,H/2);ctx.moveTo(W/2,H/2-7*u);ctx.lineTo(W/2,H/2+7*u);ctx.stroke();
+    ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=3*u;
+    ctx.fillStyle='#ff2b2b';ctx.beginPath();ctx.arc(m+12*u,m+20*u,5.5*u,0,6.2832);ctx.fill();
+    ctx.fillStyle='#fff';ctx.font='700 '+15*u+'px '+mono;ctx.textAlign='left';ctx.fillText('REC',m+23*u,m+20.5*u);
+    ctx.textAlign='right';ctx.fillText('00:'+pad(1+sd%58)+':'+pad(sd%60)+':'+pad((sd*7)%25),W-m-4*u,H-m-14*u);
+    ctx.strokeRect(W-m-30*u,m+13*u,22*u,11*u);ctx.fillStyle='#fff';ctx.fillRect(W-m-27*u,m+16*u,14*u,5*u);ctx.fillRect(W-m-8*u,m+16.5*u,2.5*u,4*u);
+    ctx.textAlign='left';ctx.font='700 '+11*u+'px '+mono;ctx.fillText('4K  60',m+4*u,H-m-14*u);
+  }
+  if(f.vhs>0){
+    ctx.globalAlpha=0.5+0.5*f.vhs/100;ctx.shadowColor='rgba(0,0,0,.7)';ctx.shadowBlur=2*u;ctx.shadowOffsetX=1.5*u;
+    ctx.fillStyle='#fff';ctx.font='700 '+19*u+'px '+mono;ctx.textAlign='left';
+    if(!f.rec)ctx.fillText('PLAY \u25B6',26*u,32*u);
+    ctx.font='700 '+16*u+'px '+mono;if(!f.rec)ctx.fillText('SP  0:'+pad(1+sd%58)+':'+pad(sd%60),26*u,H-28*u-(f.date?24*u:0));
+  }
+  if(f.date>0){
+    ctx.globalAlpha=0.4+0.6*f.date/100;ctx.shadowColor='rgba(255,120,20,.9)';ctx.shadowBlur=6*u;ctx.shadowOffsetX=0;
+    ctx.fillStyle='#ff9a2e';ctx.font='700 '+19*u+'px '+mono;ctx.textAlign='right';
+    ctx.fillText('\''+pad(d.getFullYear()%100)+' '+pad(d.getMonth()+1)+' '+pad(d.getDate()),W-24*u,H-26*u);
+  }
+  ctx.restore();
 }
 
 /* ----- bố cục khung ----- */
@@ -957,7 +1098,7 @@ function renderNow(){
   if(!OUTC||OUTC.width!==pv.w||OUTC.height!==pv.h){OUTC=cv(pv.w,pv.h);pendingFull=true}
   if(pendingFull){
     var out=ui.cmp?pv.data:pipe(pv.data,pv.w,pv.h,doc.p,true);
-    OUTC.getContext('2d').putImageData(new ImageData(out,pv.w,pv.h),0,0);
+    var oc2=OUTC.getContext('2d');oc2.putImageData(new ImageData(out,pv.w,pv.h),0,0);if(!ui.cmp)drawFxOverlay(oc2,pv.w,pv.h,doc.p.fx);
     pendingFull=false;
   }
   var ctx=$('#view').getContext('2d'),W=pv.w,H=pv.h;
@@ -1019,7 +1160,7 @@ function toView(e){
 async function buildFinal(){
   var b=doc.base,W=b.width,H=b.height,id=b.getContext('2d').getImageData(0,0,W,H);
   var out=pipe(id.data,W,H,doc.p,false);
-  var oc=cv(W,H);oc.getContext('2d').putImageData(new ImageData(out,W,H),0,0);
+  var oc=cv(W,H);oc.getContext('2d').putImageData(new ImageData(out,W,H),0,0);drawFxOverlay(oc.getContext('2d'),W,H,doc.p.fx);
   var f=doc.p.frame,L=frameLayout(W,H,f),sc=1,lim=15500000;
   if(L.W*L.H>lim)sc=Math.sqrt(lim/(L.W*L.H));
   var fc=cv(L.W*sc,L.H*sc),x=fc.getContext('2d');
@@ -1074,7 +1215,7 @@ var FONTS=[['Mặc định','FoxBody,Helvetica,Arial,sans-serif'],['Helvetica Ne
 var COLORS=['#ffffff','#000000','#ff3b30','#ff9500','#ffcc00','#34c759','#00c7be','#007aff','#af52de','#f5e6c8','#12306B'];
 var RATIO_UI=[['free','Tự do'],['orig','Gốc'],['1:1','1:1'],['4:5','4:5'],['3:4','3:4'],['2:3','2:3'],['3:2','3:2'],['9:16','9:16'],['16:9','16:9']];
 var PANELS={},ACT={},TOOLS={};
-ui.auto=false;
+ui.auto=false;ui.fx='burn';
 
 function curText(){return doc.texts[ui.sel]}
 function resolve(path){
@@ -1211,9 +1352,21 @@ PANELS.beauty=function(){
   h+='<div class="hint">'+(ui.bmode==='view'?'Đang xem kết quả, vùng tô được ẩn. Hai ngón để phóng to, kéo để di chuyển.':'Tô lên vùng da cần làm mịn; vùng đã tô hiện màu gạch đỏ. Tránh tô mắt, môi, lông mày để giữ nét. Chọn “Xem kết quả” để kiểm tra.')+'</div>';
   return h;
 };
+var FXL=[['burn','Cháy film'],['leak','Lóa sáng'],['glow','Glow'],['noise','Noise'],['vhs','VHS'],['dust','Bụi xước'],['rec','REC'],['date','Dấu ngày']];
 PANELS.more=function(){
-  return '<h4>Công cụ thêm</h4><div class="row"><button class="bt pri grow" data-act="colOpen">Ghép nhiều ảnh (tối đa 6)</button></div><div class="hint">Chọn khung, đặt ảnh vào từng ô, rồi lưu hoặc chỉnh tiếp bằng các công cụ khác.</div>';
+  var fx=doc.p.fx,h='<div class="chips">';
+  FXL.forEach(function(x){h+='<button class="chip'+(ui.fx===x[0]?' on':'')+(fx[x[0]]>0&&ui.fx!==x[0]?' dot':'')+'" data-act="fxSel" data-v="'+x[0]+'">'+x[1]+'</button>'});
+  h+='</div>'+rng('p.fx.'+ui.fx,'Mức',0,100,1,1,0);
+  h+='<div class="row"><button class="bt sm" data-act="fxSeed">Đổi kiểu</button><button class="bt sm" data-act="fxOff">Tắt hết</button><button class="bt sm pri" data-act="colOpen">Ghép nhiều ảnh</button></div>';
+  return h;
 };
+ACT.fxSel=function(v){
+  var fx=doc.p.fx;
+  if(ui.fx===v&&fx[v]>0){fx[v]=0}else{ui.fx=v;if(!fx[v])fx[v]=60}
+  commit();modelChanged();
+};
+ACT.fxSeed=function(){doc.p.fx.seed=(doc.p.fx.seed+1)%1000;commit();modelChanged()};
+ACT.fxOff=function(){var fx=doc.p.fx;['burn','leak','noise','glow','vhs','dust','rec','date'].forEach(function(k){fx[k]=0});commit();modelChanged()};
 ACT.colOpen=function(){openCollage();return false};
 PANELS.frame=function(){
   var f=doc.p.frame,w=doc.p.wm,h='<div class="chips">';
