@@ -159,7 +159,7 @@ select.sel,input.txt{width:100%;border:1.5px solid var(--ink);border-radius:var(
 <div id="busy" hidden><div class="sp"></div><div id="busyMsg">Đang xử lý…</div><div class="pb"><div id="busyBar"></div></div></div>
 <script>
 'use strict';
-var APP_VER='2.0 (31/10/2026)';
+var APP_VER='2.1 (31/10/2026)';
 function $(s,r){return (r||document).querySelector(s)}
 function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
 function clamp(v,a,b){return v<a?a:(v>b?b:v)}
@@ -633,6 +633,54 @@ function fxPass(o,W,H,f){
   if(f.dust>0)dustPass(o,W,H,f.dust/100,s);
   return o;
 }
+
+/* ===== Nhận biết vùng da và làm đều màu da ===== */
+function skinProb(src,W,H){
+  var n=W*H,w=new Float32Array(n),cb=new Float32Array(n),cr=new Float32Array(n),p,i,sc=0,sb=0,sr=0;
+  for(p=0;p<n;p++){
+    i=p*4;var R=src[i],G=src[i+1],B=src[i+2],Y=0.299*R+0.587*G+0.114*B;
+    var b=128-0.168736*R-0.331264*G+0.5*B,r=128+0.5*R-0.418688*G-0.081312*B;
+    cb[p]=b;cr[p]=r;
+    var e=Math.max(0,77-b,b-127,133-r,r-173)/6;
+    var v=Math.exp(-e*e);
+    if(Y<30||Y>248||R<G)v*=0.15;
+    w[p]=v;if(v>0.9){sc++;sb+=b;sr+=r}
+  }
+  if(sc>n*0.002){
+    sb/=sc;sr/=sc;
+    for(p=0;p<n;p++){if(!w[p])continue;var db=cb[p]-sb,dr=cr[p]-sr;w[p]*=Math.exp(-(db*db+dr*dr)/(2*18*18))}
+  }
+  return w;
+}
+function fBlur(a,W,H,r){
+  var t=new Float32Array(a.length),o=new Float32Array(a.length),x,y,s,k,d=2*r+1;
+  for(y=0;y<H;y++){s=0;var b=y*W;
+    for(k=-r;k<=r;k++)s+=a[b+Math.min(W-1,Math.max(0,k))];
+    for(x=0;x<W;x++){t[b+x]=s/d;s+=a[b+Math.min(W-1,x+r+1)]-a[b+Math.max(0,x-r)]}}
+  for(x=0;x<W;x++){s=0;
+    for(k=-r;k<=r;k++)s+=t[Math.min(H-1,Math.max(0,k))*W+x];
+    for(y=0;y<H;y++){o[y*W+x]=s/d;s+=t[Math.min(H-1,y+r+1)*W+x]-t[Math.max(0,y-r)*W+x]}}
+  return o;
+}
+function skinTone(src,W,H,amt,mask){
+  var n=W*H,w=skinProb(src,W,H),p,c;
+  if(mask)for(p=0;p<n;p++)w[p]*=mask[p]/255;
+  var sw=0,m=[0,0,0];
+  for(p=0;p<n;p++){var v=w[p];if(v>0.05){sw+=v;m[0]+=v*src[p*4];m[1]+=v*src[p*4+1];m[2]+=v*src[p*4+2]}}
+  if(sw<n*0.002)return src;
+  for(c=0;c<3;c++)m[c]/=sw;
+  var r=Math.max(3,Math.round(W*0.022)),wb=fBlur(w,W,H,r),ch=[],lo=[];
+  for(c=0;c<3;c++){var a=new Float32Array(n);for(p=0;p<n;p++)a[p]=w[p]*src[p*4+c];ch.push(fBlur(a,W,H,r))}
+  var ws=fBlur(w,W,H,Math.max(2,r>>1)),out=new Uint8ClampedArray(src);
+  for(p=0;p<n;p++){
+    var v2=w[p];if(v2<0.02)continue;
+    var d=wb[p]+0.02,i=p*4,D0=m[0]-ch[0][p]/d,D1=m[1]-ch[1][p]/d,D2=m[2]-ch[2][p]/d;
+    var Dy=0.299*D0+0.587*D1+0.114*D2,keep=0.6*Dy;
+    var k=Math.min(1,amt*v2*Math.min(1,wb[p]*3));
+    out[i]=src[i]+(D0-keep)*k;out[i+1]=src[i+1]+(D1-keep)*k;out[i+2]=src[i+2]+(D2-keep)*k;
+  }
+  return out;
+}
 /* ===== Xóa vật thể: tô vá theo mẫu (PatchMatch nhiều tầng), chạy trong Web Worker ===== */
 /* Hàm này phải tự đủ: không dùng biến ngoài, vì được chép sang Worker bằng toString() */
 function inpaintCore(rgba,mask,W,H,post){
@@ -890,7 +938,7 @@ function defP(){
     adj:{ex:0,br:0,hl:0,sh:0,ct:0,bright:0,bp:0,sat:0,vib:0,wm:0,tn:0,sharp:0,clar:0,nr:0,vg:0},
     film:{c:0,i:-1,t:1},
     match:null,
-    beauty:{skin:60,st:[]},
+    beauty:{skin:60,tone:0,st:[]},
     fx:{burn:0,leak:0,noise:0,glow:0,vhs:0,dust:0,rec:0,date:0,seed:7},
     frame:{style:'none',w:0.04,color:'#ffffff',bottom:0,radius:0,shadow:false,ratio:'orig'},
     wm:defWM()
@@ -980,6 +1028,14 @@ function skinMask(W,H,st){
   for(i=0;i<W*H;i++)m[i]=bl[i*4];
   return m;
 }
+var SKZ=null;
+function drawSkinZone(c,W,H){
+  var pv=getPV();
+  var w=skinProb(pv.data,pv.w,pv.h),n=pv.w*pv.h,id=new ImageData(pv.w,pv.h),d=id.data;
+  for(var p=0;p<n;p++){d[p*4]=60;d[p*4+1]=200;d[p*4+2]=120;d[p*4+3]=w[p]*150}
+  if(!SKZ)SKZ=document.createElement('canvas');SKZ.width=pv.w;SKZ.height=pv.h;SKZ.getContext('2d').putImageData(id,0,0);
+  c.drawImage(SKZ,0,0,W,H);
+}
 var REDC=null;
 function drawSkinRed(c,W,H,st){
   if(!REDC)REDC=document.createElement('canvas');
@@ -989,10 +1045,16 @@ function drawSkinRed(c,W,H,st){
 }
 function pipe(src,W,H,p,useCache){
   var s=src,b=p.beauty,a=p.adj,c=useCache?PIPE:{};
-  if(b.skin>0&&b.st&&b.st.length&&!(useCache&&ui.tab==='beauty'&&ui.bmode!=='view')){
-    var k1=doc.ver+'|'+b.skin+'|'+JSON.stringify(b.st);
+  var hs=b.skin>0&&b.st&&b.st.length,ht=(b.tone|0)>0;
+  if((hs||ht)&&!(useCache&&ui.tab==='beauty'&&ui.bmode!=='view')){
+    var k1=doc.ver+'|'+b.skin+'|'+(b.tone|0)+'|'+JSON.stringify(b.st);
     if(useCache&&c.k1===k1)s=c.d1;
-    else{s=skinSmooth(s,W,H,b.skin/100,skinMask(W,H,b.st));if(useCache){c.k1=k1;c.d1=s}}
+    else{
+      var mk=b.st&&b.st.length?skinMask(W,H,b.st):null;
+      if(hs)s=skinSmooth(s,W,H,b.skin/100,mk);
+      if(ht)s=skinTone(s,W,H,b.tone/100,mk);
+      if(useCache){c.k1=k1;c.d1=s}
+    }
   }else if(useCache)c.k1=null;
   if(a.sharp||a.clar||a.nr){
     var k2=(useCache?c.k1:'x')+'|'+a.sharp+'|'+a.clar+'|'+a.nr;
@@ -1198,8 +1260,9 @@ function drawOv(){
   }else if(ui.tab==='text'&&ui.sel>=0&&doc.texts[ui.sel]){
     var t=doc.texts[ui.sel],m=textMetrics(c,t,W),pad=m.fs*0.3;
     c.save();c.translate(t.x*W,t.y*H);c.rotate(t.rot*Math.PI/180);c.strokeStyle='#8CC0B0';c.lineWidth=2.5*u;c.setLineDash([7*u,5*u]);c.strokeRect(-m.w/2-pad,-m.h/2-pad*0.6,m.w+pad*2,m.h+pad*1.2);c.restore();
-  }else if(ui.tab==='beauty'&&ui.bmode!=='view'&&doc.p.beauty.st.length){
-    drawSkinRed(c,W,H,doc.p.beauty.st);
+  }else if(ui.tab==='beauty'){
+    if(ui.bmode!=='view'&&doc.p.beauty.st.length)drawSkinRed(c,W,H,doc.p.beauty.st);
+    if(ui.skinv)drawSkinZone(c,W,H);
   }
 }
 
@@ -1412,9 +1475,9 @@ PANELS.draw=function(){
 PANELS.beauty=function(){
   var b=doc.p.beauty,n=b.st.length;
   var h='<div class="chips">'+chipU('bmode','paint','<span class="brush"></span>Tô vùng',ui.bmode)+chipU('bmode','erase','Tẩy vùng tô',ui.bmode)+chipU('bmode','view','Xem kết quả',ui.bmode)+'</div>';
-  h+=rng('p.beauty.skin','Độ mịn da',0,100,1,1,60)+rng('u.bbrush','Cỡ bút',1,15,0.5,1,5);
-  h+='<div class="row"><button class="bt sm" data-act="sundo"'+(n?'':' disabled')+'>Xóa nét cuối</button><button class="bt sm red" data-act="sclear"'+(n?'':' disabled')+'>Xóa hết vùng tô</button></div>';
-  h+='<div class="hint">'+(ui.bmode==='view'?'Đang xem kết quả, vùng tô được ẩn. Hai ngón để phóng to, kéo để di chuyển.':'Tô lên vùng da cần làm mịn; vùng đã tô hiện màu gạch đỏ. Tránh tô mắt, môi, lông mày để giữ nét. Chọn “Xem kết quả” để kiểm tra.')+'</div>';
+  h+=rng('p.beauty.skin','Độ mịn da',0,100,1,1,60)+rng('p.beauty.tone','Đều màu da',0,100,1,1,0)+rng('u.bbrush','Cỡ bút',1,15,0.5,1,5);
+  h+='<div class="row"><button class="bt sm" data-act="sundo"'+(n?'':' disabled')+'>Xóa nét cuối</button><button class="bt sm'+(ui.skinv?' pri':'')+'" data-act="skinv">Vùng da</button><button class="bt sm red" data-act="sclear"'+(n?'':' disabled')+'>Xóa hết vùng tô</button></div>';
+  h+='<div class="hint">'+(ui.bmode==='view'?'Đang xem kết quả, vùng tô được ẩn. Hai ngón để phóng to, kéo để di chuyển.':'Tô vùng da để làm mịn; “Đều màu da” tự nhận biết da (không tô thì áp cho cả ảnh). Vùng đã tô hiện màu gạch đỏ. Tránh tô mắt, môi, lông mày để giữ nét. Chọn “Xem kết quả” để kiểm tra.')+'</div>';
   return h;
 };
 var FXL=[['burn','Cháy film'],['leak','Lóa sáng'],['glow','Glow'],['noise','Noise'],['vhs','VHS'],['dust','Bụi xước'],['rec','REC'],['date','Dấu ngày']];
@@ -1789,6 +1852,7 @@ ACT.setDel=async function(v){
   if(!(await askConfirm('Xóa bộ chỉnh','Xóa “'+s.name+'” khỏi máy?','Xóa',true)))return false;
   sets.splice(+v,1);lsSet(K_SETS,sets);refreshPanel();return false;
 };
+ACT.skinv=function(){ui.skinv=!ui.skinv;modelChanged()};
 ACT.sundo=function(){var st=doc.p.beauty.st;if(!st.length)return false;st.pop();commit();modelChanged()};
 ACT.sclear=function(){if(!doc.p.beauty.st.length)return false;doc.p.beauty.st=[];commit();modelChanged()};
 ACT.filmCat=function(v){ui.fc=+v;ui.fs=null};
