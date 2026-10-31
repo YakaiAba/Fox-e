@@ -6,9 +6,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Chỉnh ảnh">
+<meta name="apple-mobile-web-app-title" content="Fox-e">
 <meta name="theme-color" content="#FBF9F4">
-<title>Chỉnh ảnh</title>
+<title>Fox-e</title>
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-512.png">
 <style>
@@ -21,9 +21,9 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
 input,select,textarea{font:inherit;font-size:16px;color:var(--tx)}
 .ic{width:26px;height:26px;display:block;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 #app{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--paper)}
-#top{background:#fff;color:var(--ink2);display:flex;align-items:center;gap:2px;padding:calc(env(safe-area-inset-top) + 4px) 8px 4px;min-height:48px;flex:0 0 auto;border-bottom:1.8px solid var(--ink)}
-#top .ttl{font:700 20px/1 "Bradley Hand","Marker Felt","Segoe Print",cursive;margin:0 6px 0 4px;white-space:nowrap;color:var(--ink2)}
-#top .sp{flex:1}
+#top,#cTop{background:#fff;color:var(--ink2);display:flex;align-items:center;gap:2px;padding:calc(env(safe-area-inset-top) + 4px) 8px 4px;min-height:48px;flex:0 0 auto;border-bottom:1.8px solid var(--ink)}
+#top .ttl,#cTop .ttl{font:700 20px/1 "Bradley Hand","Marker Felt","Segoe Print",cursive;margin:0 6px 0 4px;white-space:nowrap;color:var(--ink2)}
+#top .sp,#cTop .sp{flex:1}
 .ib{width:38px;height:38px;border-radius:var(--wob);color:var(--ink);display:flex;align-items:center;justify-content:center}
 .ib:active,.ib.hold{background:var(--mint)}
 .ib[disabled]{opacity:.3}
@@ -42,8 +42,8 @@ input,select,textarea{font:inherit;font-size:16px;color:var(--tx)}
 #panel{background:#fff;border-top:1.8px solid var(--ink);max-height:38vh;overflow-y:auto;padding:8px 12px 8px;flex:0 0 auto;-webkit-overflow-scrolling:touch;-webkit-user-select:none}
 #tabs{display:flex;overflow-x:auto;background:var(--paper);border-top:1.5px solid var(--line);padding-bottom:calc(env(safe-area-inset-bottom)*.35);flex:0 0 auto;scrollbar-width:none}
 #tabs::-webkit-scrollbar{display:none}
-.tab{flex:1 0 auto;min-width:60px;padding:5px 4px 3px;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:11px;color:var(--mut)}
-.tab i{font-style:normal;width:40px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:var(--wob)}
+.tab{flex:1 1 0;min-width:0;padding:5px 0 3px;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:11px;color:var(--mut)}
+.tab i{font-style:normal;width:34px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:var(--wob)}
 .tab .ic{width:24px;height:24px}
 .tab.on{color:var(--ink2);font-weight:700}
 .tab.on i{background:var(--mint)}
@@ -108,6 +108,16 @@ select.sel,input.txt{width:100%;border:1.5px solid var(--ink);border-radius:var(
 #busy .pb{width:200px;height:6px;background:#ffffff44;border-radius:3px;overflow:hidden}
 #busy .pb div{height:100%;width:0;background:var(--sun)}
 @keyframes spin{to{transform:rotate(360deg)}}
+#col{position:fixed;inset:0;z-index:40;background:var(--paper);display:flex;flex-direction:column}
+#cStage{flex:1;min-height:120px;position:relative;background:var(--stage);overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:none}
+#cCv{display:block;touch-action:none}
+#cPanel{background:#fff;border-top:1.8px solid var(--ink);max-height:46vh;overflow-y:auto;padding:8px 12px calc(env(safe-area-inset-bottom)*.5 + 8px);flex:0 0 auto;-webkit-overflow-scrolling:touch}
+.tp{flex:0 0 auto;padding:4px;border-radius:var(--wob);border:1.5px solid var(--line);background:#fff}
+.tp.on{border-color:var(--ink);background:var(--mint)}
+.tp svg{display:block;width:34px;height:42px;fill:none;stroke:var(--ink);stroke-width:1.4}
+.tp svg rect{fill:var(--sun)}
+.tp.on svg rect{fill:#fff}
+.credit{font-size:11.5px;color:var(--mut);margin:2px 0 4px}
 .sec{border-top:1.5px dashed var(--line);margin-top:8px;padding-top:4px}
 </style>
 </head>
@@ -116,7 +126,7 @@ select.sel,input.txt{width:100%;border:1.5px solid var(--ink);border-radius:var(
 <div id="app">
   <header id="top">
     <button class="ib" id="bOpen" aria-label="Mở ảnh khác"></button>
-    <div class="ttl">Chỉnh ảnh</div>
+    <div class="ttl">Fox-e</div>
     <span class="sp"></span>
     <button class="ib" id="bUndo" aria-label="Hoàn tác" disabled></button>
     <button class="ib" id="bRedo" aria-label="Làm lại" disabled></button>
@@ -126,7 +136,7 @@ select.sel,input.txt{width:100%;border:1.5px solid var(--ink);border-radius:var(
   </header>
   <div id="stageBox">
     <div id="zoom"><canvas id="view"></canvas><canvas id="ov"></canvas></div>
-    <div id="empty"><svg class="logo" viewBox="0 0 100 100" fill="none" stroke="#5B6B8C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="68" cy="30" r="12" fill="#F3D9A4"/><path d="M10 80 38 40l16 22 10-12 26 30z" fill="#A8D5C8"/><path d="M38 40l-9 13 9-3 7 8" stroke="#8CC0B0"/></svg><button class="big" id="bPick">Chọn ảnh</button><small>Ảnh được xử lý ngay trong máy, không gửi đi đâu. Giữ nút nửa tròn trên cùng để xem ảnh gốc.</small></div>
+    <div id="empty"><svg class="logo" viewBox="0 0 100 100" fill="none" stroke="#5B6B8C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="68" cy="30" r="12" fill="#F3D9A4"/><path d="M10 80 38 40l16 22 10-12 26 30z" fill="#A8D5C8"/><path d="M38 40l-9 13 9-3 7 8" stroke="#8CC0B0"/></svg><button class="big" id="bPick">Chọn ảnh</button><button class="bt" id="bCollage">Ghép nhiều ảnh</button><small>Ảnh được xử lý ngay trong máy, không gửi đi đâu. Giữ nút nửa tròn trên cùng để xem ảnh gốc.</small></div>
     <button id="bFit" hidden>⤢ Vừa khung</button>
   </div>
   <section id="panel"></section>
@@ -140,7 +150,7 @@ select.sel,input.txt{width:100%;border:1.5px solid var(--ink);border-radius:var(
 <div id="busy" hidden><div class="sp"></div><div id="busyMsg">Đang xử lý…</div><div class="pb"><div id="busyBar"></div></div></div>
 <script>
 'use strict';
-var APP_VER='1.2 (31/10/2026)';
+var APP_VER='1.3 (31/10/2026)';
 function $(s,r){return (r||document).querySelector(s)}
 function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
 function clamp(v,a,b){return v<a?a:(v>b?b:v)}
@@ -241,132 +251,62 @@ function hueOff(h){ /* màu thuần theo góc sắc độ, trừ đi mức xám 
  sh/hi = góc-màu:mức cho vùng tối/vùng sáng, gs dịch màu lá (+vàng/-lục lam), bs dịch màu trời (+lam ngọc/-tím),
  gr hạt, vg tối viền, mono đen trắng */
 var FILM_RAW=[
-{id:'cd',name:'Chân dung',list:[
-'Da Đào 160|ct.08 fd.03 sat-.06 vib.1 wm.1 tn.03 sh20:.04 hi35:.05 gr.01',
-'Sữa Ấm|ct-.1 fd.06 sat-.12 wm.08 hl.1 hi40:.04 ex.08',
-'Nắng Chiều Phố|ct.12 fd.04 sat.08 wm.18 sh15:.06 hi45:.1 vg.12 gr.015',
-'Kem Dâu|ct-.05 fd.05 sat-.04 vib.12 tn.08 wm.05 hi340:.06 sh330:.03 ex.1',
-'Mơ Phai 400|ct.1 fd.08 sat-.18 wm.14 sh25:.05 hi50:.08 gr.03 vg.15',
-'Cổ Điển Nâu|ct.18 fd.07 sat-.2 wm.16 sh30:.09 hi45:.07 gr.03 vg.2',
-'Trong Veo|ct.05 sat.04 vib.14 wm-.02 ex.08 hl.08',
-'Lụa Hồng|ct-.12 fd.07 sat-.1 tn.12 wm.04 hi330:.07 ex.12 hl.12',
-'Studio Trắng|ct.1 sat-.08 wm-.05 ex.15 hl.18 fd.02',
-'Đêm Neon Tím|ct.2 sat.12 sh270:.12 hi330:.08 wm-.08 vg.22 gr.02',
-'Mật Ong|ct.1 fd.04 sat.06 wm.22 hi45:.1 sh25:.05 vg.1',
-'Phim Xanh Rêu|ct.14 fd.06 sat-.1 gs-.3 sh170:.06 hi50:.05 wm.04 gr.025',
-'Ánh Sớm|ct-.04 fd.05 sat-.05 wm.1 ex.12 hi50:.07 hl.14 sh210:.03',
-'Da Sáng Mịn|ct-.08 sat-.05 vib.08 ex.16 hl.2 fd.03 wm.03',
-'Tương Phản Nhẹ|ct.22 sat-.04 vib.06 wm.03 fd.02',
-'Chân Dung Mono|mono1 ct.18 fd.04 gr.03 vg.15',
-'Hoàng Hôn Đỏ|ct.12 sat.1 wm.26 tn.06 sh350:.08 hi30:.12 vg.18 gr.015',
-'Lạnh Dịu|ct.06 fd.04 sat-.14 wm-.14 sh215:.07 hi200:.04 ex.04',
-'Bìa Tạp Chí|ct.26 sat.06 vib.1 wm.02 hl.1 fd.01',
-'Hạt Vàng 800|ct.16 fd.09 sat-.12 wm.2 sh35:.1 hi48:.1 gr.055 vg.2']},
-{id:'pc',name:'Phong cảnh',list:[
-'Xanh Núi Rừng|ct.14 sat.12 vib.14 gs.4 bs.3 sh160:.04 hl.1',
-'Bình Minh Cam|ct.12 sat.1 wm.2 sh350:.05 hi35:.14 vg.15',
-'Biển Ngọc|ct.1 sat.1 vib.2 bs.5 gs-.3 wm-.04 sh185:.06',
-'Sương Mù Sớm|ct-.16 fd.1 sat-.2 wm-.04 hl.2 ex.1 hi210:.04',
-'Chiều Vàng Lúa|ct.12 fd.03 sat.12 wm.24 gs.5 hi50:.1 vg.12',
-'Mùa Thu Phai|ct.14 fd.05 sat-.04 wm.2 gs.7 sh20:.07 hi40:.07 gr.02 vg.15',
-'Trời Xanh Sâu|ct.18 sat.1 bs.2 wm-.06 hl.15 sh225:.05',
-'Phim Núi Lạnh|ct.1 fd.06 sat-.12 wm-.1 sh205:.09 hi190:.05 gr.03',
-'Rừng Mưa|ct.1 sat.06 gs-.4 sh150:.08 hi100:.03 wm-.02 vg.2',
-'Hoàng Hôn Tím|ct.16 sat.14 wm.08 sh280:.1 hi25:.12 vg.22',
-'Cát Nắng|ct.14 sat.04 wm.2 fd.04 hi45:.1 hl.1 vg.1',
-'Đồng Cỏ Tươi|ct.08 sat.16 vib.1 gs.6 wm.06 ex.04',
-'Giờ Xanh|ct.12 sat.04 wm-.2 sh225:.12 hi215:.06 ex-.06 vg.2',
-'Tuyết Trắng|ct.06 sat-.1 wm-.1 ex.18 hl.2 bs.3 sh210:.04',
-'Thu Hồng Lá|ct.12 sat.1 wm.15 gs.5 hi15:.08 sh350:.05',
-'Nâu Đất Cổ|ct.2 fd.08 sat-.22 wm.18 sh30:.1 hi45:.06 gr.035 vg.22',
-'Mưa Phùn Xám|ct.04 fd.07 sat-.3 wm-.05 sh200:.06 gr.02 ex-.04',
-'Ngày Nắng Gắt|ct.24 sat.12 vib.1 hl.12 wm.1 bs.2',
-'Sao Đêm Xanh|ct.2 sat.04 wm-.14 ex.1 sh235:.14 hi200:.06 vg.2',
-'Đen Trắng Núi|mono1 ct.28 fd.03 hl.1 gr.025 vg.2']},
-{id:'kt',name:'Kiến trúc',list:[
-'Bê Tông Lạnh|ct.2 sat-.28 wm-.08 sh210:.06 hl.1',
-'Phố Cổ Nâu|ct.16 fd.07 sat-.16 wm.14 sh30:.08 hi45:.06 gr.03 vg.18',
-'Kính Xanh|ct.18 sat-.06 wm-.12 bs.3 sh205:.09 hi190:.05',
-'Tường Vàng Nắng|ct.14 sat.04 wm.24 hi45:.1 hl.08',
-'Tối Giản Trắng|ct.12 sat-.2 ex.14 hl.2 wm-.03 fd.02',
-'Mái Ngói Đỏ|ct.16 sat.1 wm.12 sh10:.05 hi35:.08 vg.15',
-'Đường Nét Mono|mono1 ct.3 fd.02 hl.1 vg.12',
-'Hoàng Hôn Phố|ct.18 sat.08 wm.16 sh230:.09 hi30:.1 vg.2',
-'Thép Xám Xanh|ct.22 sat-.22 wm-.1 sh200:.08 hi60:.03',
-'Phim Gạch Cũ|ct.14 fd.09 sat-.18 wm.1 gs-.2 sh175:.06 hi40:.07 gr.04 vg.2',
-'Đô Thị Đêm|ct.24 sat.04 wm-.06 sh235:.12 hi25:.1 vg.25 gr.02',
-'Nhà Gỗ Ấm|ct.1 sat-.04 wm.2 sh25:.06 hi45:.08 fd.04',
-'Bầu Trời Sạch|ct.2 sat.04 bs.4 wm-.04 hl.18 ex.04',
-'Cổ Kính Sepia|ct.12 fd.1 sat-.4 wm.22 sh30:.1 hi45:.1 gr.04 vg.25',
-'Mặt Tiền Sáng|ct.06 sat-.08 ex.16 hl.18 wm.04',
-'Hình Học Đậm|ct.32 sat.06 hl.12 wm-.02',
-'Sớm Lam Nhạt|ct.1 fd.05 sat-.14 wm-.14 ex.06 sh215:.06 hi200:.04',
-'Bóng Chiều Dài|ct.22 fd.03 sat-.08 wm.2 sh240:.07 hi40:.1 vg.2',
-'Xi Măng Ấm|ct.14 sat-.24 wm.08 fd.05 sh35:.05 gr.02',
-'Ban Công Xanh Lục|ct.12 sat-.08 gs-.3 sh170:.06 hi50:.05 wm.04 gr.02']},
-{id:'ds',name:'Đời sống',list:[
-'Ngày Thường 400|ct.1 fd.06 sat-.04 wm.1 sh200:.04 hi45:.06 gr.03',
-'Quán Cà Phê|ct.12 fd.06 sat-.08 wm.2 sh20:.07 hi40:.08 vg.15 gr.02',
-'Phố Mưa Đêm|ct.18 sat.06 wm-.08 sh220:.1 hi345:.08 vg.22 gr.035',
-'Cuối Tuần Nhẹ|ct-.04 fd.06 sat-.05 wm.08 ex.1 hl.12',
-'Máy Ảnh Cũ|ct.14 fd.1 sat-.15 wm.14 gs-.15 sh180:.06 hi50:.08 gr.05 vg.25',
-'Hạt Trắng Đen|mono1 ct.2 fd.06 gr.06 vg.2',
-'Nắng Ban Mai|ct.08 sat.06 vib.1 wm.16 ex.1 hi50:.08 hl.1',
-'Hộp Màu Pastel|ct-.14 fd.08 sat-.06 vib.1 ex.14 tn.05 wm.02',
-'Xe Buýt Đêm|ct.2 sat-.02 wm-.1 sh200:.12 hi40:.1 gr.045 vg.2',
-'Chợ Sớm|ct.14 sat.1 vib.1 wm.14 gs.3 vg.1',
-'Kỷ Niệm Nâu|ct.1 fd.1 sat-.28 wm.2 sh30:.09 hi48:.08 gr.04 vg.2',
-'Phim Hè 200|ct.12 sat.12 vib.12 wm.12 gs.3 hi45:.06 gr.025',
-'Dạo Phố Xanh|ct.12 sat-.06 gs-.25 bs.2 wm-.04 sh190:.06 gr.02',
-'Bình Yên Nhẹ|ct-.08 fd.07 sat-.1 hl.12 ex.08 wm.06',
-'Tiệc Đêm Đỏ|ct.2 sat.1 wm.04 sh350:.1 hi320:.07 vg.25 gr.03',
-'Gió Biển|ct.08 sat.08 wm-.08 bs.3 hl.1 ex.08 hi190:.04',
-'Trưa Nắng Gắt|ct.22 sat.1 wm.1 hl.14 vg.1',
-'Bạn Bè Ấm|ct.1 sat.04 wm.24 hi48:.09 sh20:.05 gr.02',
-'Ký Ức Phai|ct-.02 fd.12 sat-.22 wm.06 tn.04 sh210:.05 gr.045 vg.15',
-'Sống Chậm|ct.04 fd.05 sat-.12 wm.12 ex.05 hl.08 gr.015']},
-{id:'kg',name:'Không gian',list:[
-'Phòng Khách Sáng|ct.06 sat-.06 ex.16 hl.2 wm.06 fd.02',
-'Gỗ Sồi Ấm|ct.1 sat-.02 wm.24 sh25:.05 hi45:.07 fd.03',
-'Tối Giản Bắc Âu|ct.04 sat-.24 wm-.04 ex.14 hl.18 fd.04',
-'Đèn Vàng Tối|ct.14 sat.04 wm.3 sh20:.08 hi45:.12 vg.2 ex-.04',
-'Cửa Sổ Nắng|ct.08 sat.02 ex.12 hl.22 wm.1 hi50:.06',
-'Bê Tông Xám Ấm|ct.14 sat-.3 wm.06 fd.05 sh30:.05',
-'Boutique Hồng Nhạt|ct-.06 fd.06 sat-.08 tn.1 hi340:.06 ex.1 wm.04',
-'Xanh Cây Lá|ct.08 sat.04 vib.1 gs-.3 sh160:.06 ex.08',
-'Quán Ăn Đêm|ct.18 sat.08 wm.2 sh350:.07 hi40:.1 vg.22 gr.02',
-'Studio Trắng Sữa|ct.02 sat-.14 ex.18 hl.24 fd.03',
-'Cổ Điển Ấm Nâu|ct.12 fd.08 sat-.2 wm.2 sh30:.08 hi45:.08 vg.2',
-'Ánh Sáng Lạnh|ct.1 sat-.1 wm-.16 sh215:.08 hi200:.04 ex.06',
-'Phòng Ngủ Dịu|ct-.08 fd.07 sat-.1 wm.1 ex.1 hl.14 sh25:.03',
-'Sàn Gỗ Mật|ct.12 sat.04 wm.2 hi48:.08 hl.08',
-'Văn Phòng Sạch|ct.1 sat-.12 wm-.06 ex.12 hl.16 fd.02',
-'Bếp Sáng Trắng|ct.06 sat-.08 ex.18 hl.2 wm.02',
-'Nội Thất Tương Phản|ct.28 sat.02 hl.1 wm.04',
-'Quầy Bar Tím Xanh|ct.2 sat.06 sh250:.12 hi190:.08 vg.22 wm-.04',
-'Gạch Men Xanh|ct.1 sat.02 bs.2 gs-.2 wm-.06 sh185:.06 ex.06',
-'Mono Không Gian|mono1 ct.2 ex.08 fd.03 vg.12']},
-{id:'at',name:'Ẩm thực',list:[
-'Món Nóng Rực|ct.14 sat.18 vib.14 wm.16 hi40:.07 vg.12',
-'Bánh Ngọt Kem|ct-.04 fd.05 sat.04 vib.1 wm.1 ex.12 hl.14 tn.04',
-'Cà Phê Nâu|ct.16 sat-.04 wm.22 sh25:.08 hi40:.07 vg.18',
-'Rau Xanh Tươi|ct.1 sat.14 vib.16 gs.4 ex.06',
-'Bàn Ăn Sáng|ct.04 sat.04 ex.14 hl.18 wm.08',
-'Đồ Nướng Cháy Cạnh|ct.22 sat.12 wm.2 sh20:.08 hi35:.1 vg.22',
-'Pastel Trà Chiều|ct-.12 fd.07 sat-.08 vib.1 tn.06 ex.12 hi340:.04',
-'Nhà Hàng Đèn Vàng|ct.18 sat.06 wm.28 sh25:.1 hi45:.12 vg.25 ex-.04',
-'Hải Sản Biển|ct.1 sat.1 bs.3 wm-.04 hl.1 ex.06',
-'Bữa Tối Tối Màu|ct.26 sat.06 wm.1 ex-.1 vg.28 gr.02',
-'Tươi Ngon Rực Rỡ|ct.12 sat.24 vib.18 hl.1 ex.04',
-'Mộc Gỗ Quê|ct.1 fd.06 sat-.12 wm.2 sh30:.07 hi45:.07 gr.03',
-'Phim Ẩm Thực 400|ct.14 fd.07 sat-.04 wm.14 gs.2 hi45:.08 gr.04 vg.15',
-'Kem Mát Hồng|ct-.06 fd.05 sat.02 vib.12 tn.1 hi335:.06 ex.14',
-'Ánh Nến Ấm|ct.16 sat.02 wm.34 sh15:.09 hi40:.14 vg.28 ex-.06',
-'Thực Đơn Sáng Rõ|ct.18 sat.1 vib.1 hl.14 ex.1 wm.04',
-'Bơ Vàng|ct.08 sat.06 wm.18 hi50:.1 ex.08 hl.08',
-'Phở Sớm Sương|ct.04 fd.06 sat-.08 wm.08 ex.1 hl.14 hi50:.04',
-'Trà Xanh Mát|ct.08 sat.04 gs-.2 wm-.02 sh165:.07 ex.08',
-'Đen Trắng Bếp Xưa|mono1 ct.24 fd.04 gr.04 vg.2']}
+{id:"kd",name:"Kodak",list:[
+"Kodak Portra 400 v2|ct.084 fd.094 hl.12 sat-.09 wm.072 tn-.015 sh215:.05 hi50:.03 gr.045",
+"Kodak Portra 160 v2|ct.118 fd.04 hl.05 sat-.18 wm.108 tn-.003 sh215:.05 hi50:.03 gr.02",
+"Kodak Portra 800 v3|ct.072 fd.061 hl.2 sat-.045 wm.068 tn-.012 sh215:.05 hi50:.03 gr.06",
+"Kodak Gold 200|ct.096 fd.05 hl.18 sat-.045 wm.108 tn-.003 sh215:.05 hi50:.03 gr.045",
+"Kodak Ultramax 400|ct.172 fd.04 hl.05 wm.072 tn-.012 sh215:.05 hi50:.03 gr.06",
+"Kodak Ektar 100|ct.136 fd.084 hl.05 wm.058 tn.009 sh215:.05 hi50:.03",
+"Kodak Royal Gold 400|ct.142 fd.06 hl.16 sat.16 wm.056 tn.024 gs-.12 sh175:.07 hi35:.06 gr.045",
+"Kodak Vericolor Warm|ct.032 fd.072 hl.08 sat.09 wm.184 tn-.003 sh20:.04 hi40:.07 gr.02",
+"1976 Kodak|ct.106 fd.06 hl.05 sat.18 wm.104 tn-.018 sh20:.04 hi40:.07 gr.045",
+"Reggie's Portra|ct.106 fd.062 hl.09 sat-.09 wm.072 tn-.006 sh215:.05 hi50:.03 gr.02",
+"Kodachrome 64|ct.154 fd.04 hl.05 sat-.09 wm.084 tn-.009 sh215:.05 hi50:.03 gr.02",
+"Kodachrome 25|ct.138 fd.061 hl.12 sat-.135 wm.072 tn-.006 sh215:.05 hi50:.03"]},
+{id:"fj",name:"Fujicolor & Agfa",list:[
+"Fujicolor Superia 100|ct.122 fd.094 hl.09 sat.025 wm.012 tn-.003 gs-.12 sh175:.07 hi35:.06 gr.02",
+"Superia Xtra 400|ct.136 fd.082 hl.12 sat.16 wm.096 tn-.006 gs-.12 sh175:.07 hi35:.06 gr.045",
+"Fujicolor Natura 1600|ct.136 fd.06 hl.18 sat-.11 wm.012 tn-.009 gs-.12 sh175:.07 hi35:.06 gr.06",
+"Fujicolor Pro 400H|ct.16 fd.06 hl.2 sat.16 wm.024 tn-.012 gs-.12 sh175:.07 hi35:.06 gr.045",
+"Fujicolor 100 Industrial|ct.052 fd.02 hl.12 sat-.005 wm.096 gr.02",
+"Fujicolor Reala 100|ct.118 fd.082 hl.16 sat-.02 gs-.12 sh175:.07 hi35:.06 gr.02",
+"Easy Reala Ace|ct.028 fd.02 hl.16 sat.04 gr.02",
+"PRO Negative 160C|ct.014 fd.032 hl.09 sat.22 wm.036 tn-.003 gr.02",
+"Agfa Ultra 100 v2|ct.078 fd.07 hl.12 sat.135 wm.092 tn-.018 sh20:.04 hi40:.07 gr.035"]},
+{id:"sl",name:"Slide & Chrome",list:[
+"Vivid Velvia|ct.114 fd.042 hl.16 sat.4 vib.06 wm.048 tn-.006 gr.02",
+"Expired Velvia|ct.136 fd.104 hl.12 sat.115 wm-.072 tn.021 gs-.12 sh175:.07 hi35:.06 gr.02",
+"Standard Provia|ct.038 fd.02 hl.12 sat.13 wm-.036 tn-.009 gr.02",
+"Thommy's Ektachrome|ct.104 fd.05 sat.045 wm.012 tn.006 sh20:.04 hi40:.07 gr.02",
+"Pacific Blues|ct.154 fd.06 hl.2 sat.16 wm.06 tn-.006 gs-.12 sh175:.07 hi35:.06 gr.06",
+"1960 Chrome|ct.192 fd.062 hl.2 sat-.25 wm-.016 tn-.018 gr.06"]},
+{id:"cn",name:"Cinema & Night",list:[
+"Vintage Eterna|ct-.016 fd.062 sat-.03 wm.084 tn-.009 gr.045",
+"Kodak Vision3 250D v2|ct.142 fd.06 hl.05 sat-.045 wm-.02 tn-.015 sh20:.04 hi40:.07 gr.045",
+"CineStill 800T|ct-.066 fd.06 hl.12 sat.06 wm-.084 tn-.03 gr.06",
+"CineStill 400D v2|ct-.078 fd.01 hl.13 sat.09 wm-.112 tn.006 ex.02 gr.045",
+"Pushed CineStill 800T|ct.234 fd.04 hl.14 sat-.205 wm-.08 tn-.012 gr.06",
+"RedScale|ct.176 fd.05 hl.05 sat.16 wm.35 gs-.12 sh175:.07 hi35:.06 gr.045",
+"Nature Neon|ct.12 fd.05 hl.12 sat-.045 wm.044 tn-.009 sh215:.05 hi50:.03 gr.02"]},
+{id:"vt",name:"Vintage & Summer",list:[
+"Nostalgia Negative|ct.042 fd.07 hl.16 sat.18 wm.152 sh20:.04 hi40:.07 gr.045",
+"Timeless Negative|ct.048 fd.114 hl.12 sat-.135 wm.14 tn-.003 sh20:.04 hi40:.07 gr.02",
+"Summer of 1960|ct.114 fd.07 hl.12 sat.135 wm.094 tn-.024 sh20:.04 hi40:.07 gr.045",
+"Nostalgic Americana|ct.022 fd.093 hl.09 sat-.09 wm.116 tn-.018 sh20:.04 hi40:.07 gr.06",
+"Vintage Bronze|ct.226 fd.052 hl.05 sat-.34 wm.168 tn-.006 gr.035",
+"California Summer|fd.092 hl.2 sat.18 wm.188 tn-.021 sh20:.04 hi40:.07 gr.02",
+"Texas Sun|ct.1 fd.051 hl.13 wm.136 tn-.012 sh215:.05 hi50:.03 gr.045",
+"Creamy Color|ct.226 fd.06 hl.12 sat-.2 wm.104 tn.03 gs-.12 sh175:.07 hi35:.06 gr.06",
+"Copenhagen Negative|ct.148 fd.104 hl.12 sat.16 wm.008 tn.006 gs-.12 sh175:.07 hi35:.06 gr.045"]},
+{id:"bw",name:"Black & White",list:[
+"Kodak Tri-X 400|mono1 ct.17 fd.01 hl.05 gr.06",
+"Ilford HP5 Plus 400|mono1 ct.1 fd.02 hl.16 gr.06",
+"Kodak T-Max 100 Hard Tone|mono1 ct.14 fd.01 hl.05 gr.035",
+"Ilford FP4 Plus 125|mono1 ct.098 fd.043 hl.07 gr.035",
+"Agfa Scala|mono1 ct.18 gr.02",
+"Classic B&W|mono1 ct.212 fd.01 hl.05 gr.06",
+"Kodak T-Max P3200|mono1 ct.154 fd.02 hl.12 gr.06"]}
 ];
 var FILM=FILM_RAW.map(function(c){
   return {id:c.id,name:c.name,list:c.list.map(function(s){
@@ -379,7 +319,7 @@ var FILM=FILM_RAW.map(function(c){
     return o;
   })};
 });
-function filmOf(f){return f&&f.i>=0&&FILM[f.c]?FILM[f.c].list[f.i]:null}
+function filmOf(f){return f&&f.i>=0&&FILM[f.c]?(FILM[f.c].list[f.i]||null):null}
 
 /* Gộp thông số chỉnh tay + film thành một bộ */
 function combine(p){
@@ -802,16 +742,19 @@ function onBaseChanged(){
   if(ui.tab==='erase')initMask();
   if(ui.tab==='crop')initCrop();
 }
+function openCanvas(c){
+  doc.p=defP();doc.texts=[];doc.strokes=[];ui.sel=-1;ui.cmp=false;ui.k=1;ui.tx=0;ui.ty=0;
+  setBase(c);HIST=[];HI=-1;commit();
+  $('#empty').hidden=true;
+  onBaseChanged();refreshPanel();scheduleRender();
+}
 async function loadFile(file){
   busy(true,'Đang mở ảnh…');
   try{
     await nextFrame();
     var im=await fileToImage(file),w=im.naturalWidth||im.width,h=im.naturalHeight||im.height,sc=Math.min(1,LOCAL.maxEdge/Math.max(w,h));
     var c=cv(w*sc,h*sc),x=c.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(im,0,0,c.width,c.height);
-    doc.p=defP();doc.texts=[];doc.strokes=[];ui.sel=-1;ui.cmp=false;ui.k=1;ui.tx=0;ui.ty=0;
-    setBase(c);HIST=[];HI=-1;commit();
-    $('#empty').hidden=true;
-    onBaseChanged();refreshPanel();scheduleRender();
+    openCanvas(c);
   }catch(e){toast('Không mở được ảnh này')}
   busy(false);
 }
@@ -1096,7 +1039,7 @@ async function exportImage(fmt,q){
   }catch(e){busy(false);toast('Xuất ảnh lỗi: ảnh quá lớn hoặc hết bộ nhớ');return {ok:false}}
 }
 /* ===== Giao diện: thẻ, bảng điều khiển, thao tác chạm ===== */
-var TABS=[['adj','adj','Chỉnh'],['film','film','Film'],['match','match','Màu mẫu'],['crop','crop','Cắt'],['erase','erase','Xóa'],['text','text','Chữ'],['draw','draw','Vẽ'],['beauty','beauty','Đẹp'],['frame','frame','Khung']];
+var TABS=[['adj','adj','Chỉnh'],['film','film','Film'],['match','match','Mẫu'],['erase','erase','Xóa'],['beauty','beauty','Đẹp'],['draw','draw','Vẽ'],['text','text','Chữ'],['crop','crop','Cắt'],['frame','frame','Khung'],['more','more','Thêm']];
 var SUN='#F3D9A4',MINT='#A8D5C8';
 var ICONS={
   plus:'<path d="M12 5v14M5 12h14"/>',
@@ -1112,6 +1055,7 @@ var ICONS={
   text:'<path d="M3.500 18 9 6l5.500 12M5.700 14h6.600"/><circle cx="18" cy="15.500" r="2.500" fill="'+SUN+'"/><path d="M20.500 13v5.500"/>',
   draw:'<path d="M4 20l1-4L16 5l3 3L8 19z" fill="'+SUN+'"/><path d="M14 7l3 3"/>',
   beauty:'<path d="M11 3c.6 4 2 5.400 6 6-4 .6-5.400 2-6 6-.6-4-2-5.400-6-6 4-.6 5.400-2 6-6z" fill="'+SUN+'"/><path d="M18 15c.3 2 1 2.700 3 3-2 .3-2.700 1-3 3-.3-2-1-2.700-3-3 2-.3 2.700-1 3-3z" fill="'+MINT+'"/>',
+  more:'<rect x="4" y="4" width="7" height="7" rx="1.5" fill="'+MINT+'"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5" fill="'+SUN+'"/>',
   frame:'<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="8" y="8" width="8" height="8" fill="'+MINT+'"/>'
 };
 function ic(k){return '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">'+ICONS[k]+'</svg>'}
@@ -1188,7 +1132,7 @@ PANELS.film=function(){
   if(f.i>=0)h+=rng('p.film.t','Cường độ · '+esc(filmOf(f).name),0,1,0.01,100,1);
   h+='<div class="chips"><div class="th'+(f.i<0?' on':'')+'" data-act="filmPick" data-v="-1:-1"><img data-th="o" alt=""><span>Gốc</span></div>';
   FILM[ui.fc].list.forEach(function(p,i){h+='<div class="th'+(f.c===ui.fc&&f.i===i?' on':'')+'" data-act="filmPick" data-v="'+ui.fc+':'+i+'"><img data-th="'+ui.fc+':'+i+'" alt=""><span>'+esc(p.name)+'</span></div>'});
-  h+='</div><div class="hint">'+FILM[ui.fc].list.length+' giả lập màu cho '+FILM[ui.fc].name.toLowerCase()+'. Kéo ngang để xem thêm.</div>';
+  h+='</div><div class="hint">'+FILM[ui.fc].list.length+' recipe nhóm '+esc(FILM[ui.fc].name)+'. Kéo ngang để xem thêm.</div><div class="credit">Tên và thông số lấy từ fujixweekly.com (Ritchie Roesch). App mô phỏng gần đúng trên ảnh đã chụp, không giống hệt màu trong máy Fujifilm.</div>';
   return h;
 };
 PANELS.match=function(){
@@ -1258,6 +1202,10 @@ PANELS.beauty=function(){
   h+='<div class="hint">'+(ui.bmode==='view'?'Đang xem kết quả, vùng tô được ẩn. Hai ngón để phóng to, kéo để di chuyển.':'Tô lên vùng da cần làm mịn; vùng đã tô hiện màu gạch đỏ. Tránh tô mắt, môi, lông mày để giữ nét. Chọn “Xem kết quả” để kiểm tra.')+'</div>';
   return h;
 };
+PANELS.more=function(){
+  return '<h4>Công cụ thêm</h4><div class="row"><button class="bt pri grow" data-act="colOpen">Ghép nhiều ảnh (tối đa 6)</button></div><div class="hint">Chọn khung, đặt ảnh vào từng ô, rồi lưu hoặc chỉnh tiếp bằng các công cụ khác.</div>';
+};
+ACT.colOpen=function(){openCollage();return false};
 PANELS.frame=function(){
   var f=doc.p.frame,w=doc.p.wm,h='<div class="chips">';
   [['none','Không'],['thin','Viền mỏng'],['thick','Viền dày'],['pol','Polaroid'],['round','Bo góc']].forEach(function(x){h+='<button class="chip" data-act="framePre" data-v="'+x[0]+'">'+x[1]+'</button>'});
@@ -1766,6 +1714,209 @@ window.addEventListener('resize',layoutStage);
 window.addEventListener('orientationchange',function(){setTimeout(layoutStage,200)});
 buildTabs();refreshPanel();updUndo();
 if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){navigator.serviceWorker.register('sw.js').catch(function(){})}
+/* ===== Ghép nhiều ảnh (tối đa 6) ===== */
+function rowsT(n){var a=[];for(var i=0;i<n;i++)a.push([0,i/n,1,1/n]);return a}
+function colsT(n){var a=[];for(var i=0;i<n;i++)a.push([i/n,0,1/n,1]);return a}
+function gridT(r,c){var a=[];for(var y=0;y<r;y++)for(var x=0;x<c;x++)a.push([x/c,y/r,1/c,1/r]);return a}
+var TPLS={
+  2:[['2 cột',colsT(2)],['2 hàng',rowsT(2)],['1 lớn, 1 nhỏ',[[0,0,.62,1],[.62,0,.38,1]]],['Lớn trên, nhỏ dưới',[[0,0,1,.64],[0,.64,1,.36]]]],
+  3:[['3 khung ngang',rowsT(3)],['3 khung dọc',colsT(3)],['Lớn trên, 2 dưới',[[0,0,1,.55],[0,.55,.5,.45],[.5,.55,.5,.45]]],['Lớn trái, 2 phải',[[0,0,.6,1],[.6,0,.4,.5],[.6,.5,.4,.5]]]],
+  4:[['Lưới 2×2',gridT(2,2)],['4 khung ngang',rowsT(4)],['Lớn trên, 3 dưới',[[0,0,1,.6],[0,.6,1/3,.4],[1/3,.6,1/3,.4],[2/3,.6,1/3,.4]]],['4 khung dọc',colsT(4)]],
+  5:[['2 trên, 3 dưới',[[0,0,.5,.5],[.5,0,.5,.5],[0,.5,1/3,.5],[1/3,.5,1/3,.5],[2/3,.5,1/3,.5]]],['Lớn trái, 4 phải',[[0,0,.6,1],[.6,0,.4,.25],[.6,.25,.4,.25],[.6,.5,.4,.25],[.6,.75,.4,.25]]],['3 trên, 2 dưới',[[0,0,1/3,.5],[1/3,0,1/3,.5],[2/3,0,1/3,.5],[0,.5,.5,.5],[.5,.5,.5,.5]]]],
+  6:[['Lưới 3×2',gridT(2,3)],['Lưới 2×3',gridT(3,2)],['Lớn, 5 nhỏ',[[0,0,.6,.6],[.6,0,.4,.3],[.6,.3,.4,.3],[0,.6,1/3,.4],[1/3,.6,1/3,.4],[2/3,.6,1/3,.4]]],['6 khung ngang',rowsT(6)]]
+};
+var CRATIOS=[['1:1',1],['4:5',4/5],['3:4',3/4],['2:3',2/3],['9:16',9/16],['16:9',16/9]];
+var COL={n:3,t:0,ratio:'4:5',gap:0.02,rad:0.02,bg:'#ffffff',cells:[],sel:-1,open:false,pickIdx:-1,pan:null};
+function colTpl(){return TPLS[COL.n][Math.min(COL.t,TPLS[COL.n].length-1)][1]}
+function colRatioVal(){return CRATIOS.filter(function(r){return r[0]===COL.ratio})[0][1]}
+function colResize(){
+  var k=colTpl().length;
+  while(COL.cells.length<k)COL.cells.push({img:null,z:1,ox:0,oy:0});
+  COL.cells.length=k;
+  if(COL.sel>=k)COL.sel=-1;
+}
+function colCellRect(i,W,H){
+  var t=colTpl()[i],g=COL.gap*Math.min(W,H),m=g/2,iw=W-2*m,ih=H-2*m;
+  return {x:m+t[0]*iw+g/2,y:m+t[1]*ih+g/2,w:t[2]*iw-g,h:t[3]*ih-g};
+}
+function colDrawCell(ctx,c,r,rad,edit){
+  ctx.save();roundRectPath(ctx,r.x,r.y,r.w,r.h,rad);ctx.clip();
+  if(c.img){
+    var iw=c.img.width,ih=c.img.height,s=Math.max(r.w/iw,r.h/ih)*c.z,dw=iw*s,dh=ih*s;
+    var px=(dw-r.w)/2*c.ox,py=(dh-r.h)/2*c.oy;
+    ctx.drawImage(c.img,r.x+(r.w-dw)/2-px,r.y+(r.h-dh)/2-py,dw,dh);
+  }else if(edit){
+    ctx.fillStyle='#E9EBF0';ctx.fillRect(r.x,r.y,r.w,r.h);
+    ctx.strokeStyle='#5B6B8C';ctx.lineWidth=Math.max(2,r.w*0.012);ctx.lineCap='round';
+    var cx=r.x+r.w/2,cy=r.y+r.h/2,L=Math.min(r.w,r.h)*0.12;
+    ctx.beginPath();ctx.moveTo(cx-L,cy);ctx.lineTo(cx+L,cy);ctx.moveTo(cx,cy-L);ctx.lineTo(cx,cy+L);ctx.stroke();
+  }
+  ctx.restore();
+}
+function colRender(W,H,edit){
+  var c=cv(W,H),x=c.getContext('2d'),rad=COL.rad*Math.min(W,H);
+  x.fillStyle=COL.bg;x.fillRect(0,0,W,H);x.imageSmoothingQuality='high';
+  for(var i=0;i<COL.cells.length;i++){
+    var r=colCellRect(i,W,H);colDrawCell(x,COL.cells[i],r,rad,edit);
+    if(edit&&i===COL.sel){x.save();x.strokeStyle='#5B6B8C';x.lineWidth=Math.max(3,W*0.006);x.setLineDash([W*0.02,W*0.012]);roundRectPath(x,r.x,r.y,r.w,r.h,rad);x.stroke();x.restore()}
+  }
+  return c;
+}
+function colDraw(){
+  if(!COL.open)return;
+  var st=$('#cStage'),v=$('#cCv'),bw=st.clientWidth-16,bh=st.clientHeight-16,ra=colRatioVal();
+  if(bw<20||bh<20)return;
+  var w=bw,h=bw/ra;if(h>bh){h=bh;w=bh*ra}
+  var dpr=Math.min(2,window.devicePixelRatio||1);
+  v.style.width=w+'px';v.style.height=h+'px';
+  var pw=Math.round(w*dpr),ph=Math.round(h*dpr);
+  v.width=pw;v.height=ph;
+  v.getContext('2d').drawImage(colRender(pw,ph,true),0,0);
+}
+function tplSvg(t,on){
+  var s='<svg viewBox="0 0 34 42">';
+  t.forEach(function(r){s+='<rect x="'+(1+r[0]*32+0.8)+'" y="'+(1+r[1]*40+0.8)+'" width="'+Math.max(1,r[2]*32-1.6)+'" height="'+Math.max(1,r[3]*40-1.6)+'" rx="1.5"/>'});
+  return s+'</svg>';
+}
+function colPanel(){
+  var p=$('#cPanel'),st=p.scrollTop,h='<h4>Số ảnh</h4><div class="chips">';
+  [2,3,4,5,6].forEach(function(n){h+='<button class="chip'+(COL.n===n?' on':'')+'" data-ca="n:'+n+'">'+n+' ảnh</button>'});
+  h+='</div><h4>Kiểu khung</h4><div class="chips">';
+  TPLS[COL.n].forEach(function(t,i){h+='<button class="tp'+(COL.t===i?' on':'')+'" data-ca="t:'+i+'" aria-label="'+t[0]+'">'+tplSvg(t[1])+'</button>'});
+  h+='</div><div class="hint">'+TPLS[COL.n][Math.min(COL.t,TPLS[COL.n].length-1)][0]+'</div><h4>Tỷ lệ ảnh</h4><div class="chips">';
+  CRATIOS.forEach(function(r){h+='<button class="chip'+(COL.ratio===r[0]?' on':'')+'" data-ca="ratio:'+r[0]+'">'+r[0]+'</button>'});
+  h+='</div>';
+  function sl(k,label,min,max,step,v,mul){return '<div class="sl"><div class="sh"><span>'+label+'</span><b id="cv_'+k+'">'+Math.round(v*mul*10)/10+'</b></div><input type="range" data-ck="'+k+'" data-m="'+mul+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+v+'"></div>'}
+  h+=sl('gap','Khoảng cách giữa ảnh',0,0.08,0.002,COL.gap,100)+sl('rad','Bo góc',0,0.1,0.002,COL.rad,100);
+  h+='<div class="sw"><span class="hint" style="margin-right:4px">Màu nền</span>';
+  ['#ffffff','#FBF9F4','#000000','#A8D5C8','#F3D9A4','#5B6B8C','#B23A2A'].forEach(function(c){h+='<button style="background:'+c+'" class="'+(COL.bg.toLowerCase()===c.toLowerCase()?'on':'')+'" data-ca="bg:'+c+'" aria-label="màu nền"></button>'});
+  h+='<input type="color" data-ck="bgc" value="'+COL.bg+'" aria-label="màu khác"></div>';
+  h+='<div class="sec"><h4>'+(COL.sel>=0?'Khung số '+(COL.sel+1):'Ảnh trong khung')+'</h4>';
+  if(COL.sel>=0){
+    var c=COL.cells[COL.sel];
+    if(c.img)h+=sl('zoom','Phóng to ảnh trong khung',1,3,0.02,c.z,1)+'<div class="hint">Kéo ngón tay trên khung để dịch ảnh.</div>';
+    h+='<div class="row"><button class="bt sm" data-ca="pick">'+(c.img?'Đổi ảnh':'Chọn ảnh')+'</button>'+(c.img?'<button class="bt sm red" data-ca="clear">Bỏ ảnh</button>':'')+'</div>';
+  }else h+='<div class="hint">Chạm vào một khung để chọn, chạm khung trống để thêm ảnh.</div>';
+  h+='<div class="row"><button class="bt sm" data-ca="multi">Chọn nhiều ảnh cùng lúc</button></div></div>';
+  h+='<div class="row"><button class="bt pri grow" data-ca="edit">Chỉnh tiếp trong Fox-e</button></div>';
+  p.innerHTML=h;p.scrollTop=st;
+}
+function colRefresh(){colPanel();colDraw()}
+async function colLoadImg(file){
+  var im=await fileToImage(file),w=im.naturalWidth||im.width,h=im.naturalHeight||im.height,sc=Math.min(1,1600/Math.max(w,h));
+  var c=cv(w*sc,h*sc),x=c.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(im,0,0,c.width,c.height);return c;
+}
+function colOutSize(){var r=colRatioVal(),L=2400;return r>=1?[L,Math.round(L/r)]:[Math.round(L*r),L]}
+function openCollage(){
+  if(COL.open)return;
+  COL.open=true;colResize();
+  var d=document.createElement('div');d.id='col';
+  d.innerHTML='<header id="cTop"><button class="ib" id="cClose" aria-label="Đóng"></button><div class="ttl">Ghép ảnh</div><span class="sp"></span><button class="sv" id="cSave">Lưu</button></header><div id="cStage"><canvas id="cCv"></canvas></div><section id="cPanel"></section><input type="file" id="fileCol" accept="image/*" hidden><input type="file" id="fileColM" accept="image/*" multiple hidden>';
+  document.body.appendChild(d);
+  $('#cClose').innerHTML=ic('undo');
+  $('#cClose').addEventListener('click',closeCollage);
+  $('#cSave').addEventListener('click',colSave);
+  $('#fileCol').addEventListener('change',async function(e){
+    var f=e.target.files&&e.target.files[0],i=COL.pickIdx;if(!f||i<0||!COL.cells[i])return;
+    busy(true,'Đang mở ảnh…');await nextFrame();
+    try{COL.cells[i]={img:await colLoadImg(f),z:1,ox:0,oy:0};COL.sel=i}catch(err){toast('Không mở được ảnh này')}
+    busy(false);colRefresh();
+  });
+  $('#fileColM').addEventListener('change',async function(e){
+    var fs=Array.prototype.slice.call(e.target.files||[]);if(!fs.length)return;
+    var empty=[];COL.cells.forEach(function(c,i){if(!c.img)empty.push(i)});
+    if(!empty.length){toast('Các khung đã đầy, hãy bỏ bớt ảnh hoặc chọn số ảnh nhiều hơn');return}
+    busy(true,'Đang mở ảnh…');await nextFrame();
+    try{for(var k=0;k<fs.length&&k<empty.length;k++)COL.cells[empty[k]]={img:await colLoadImg(fs[k]),z:1,ox:0,oy:0}}catch(err){toast('Có ảnh không mở được')}
+    busy(false);
+    if(fs.length>empty.length)toast('Chỉ có '+empty.length+' khung trống, đã bỏ '+(fs.length-empty.length)+' ảnh thừa');
+    colRefresh();
+  });
+  var cp=$('#cPanel');
+  cp.addEventListener('click',function(e){
+    var b=e.target.closest('[data-ca]');if(!b)return;
+    var a=b.getAttribute('data-ca'),i=a.indexOf(':'),k=i<0?a:a.slice(0,i),v=i<0?'':a.slice(i+1);
+    if(k==='n'){COL.n=+v;COL.t=0;colResize()}
+    else if(k==='t'){COL.t=+v;colResize()}
+    else if(k==='ratio')COL.ratio=v;
+    else if(k==='bg')COL.bg=v;
+    else if(k==='pick'){COL.pickIdx=COL.sel;$('#fileCol').value='';$('#fileCol').click();return}
+    else if(k==='multi'){$('#fileColM').value='';$('#fileColM').click();return}
+    else if(k==='clear'){if(COL.sel>=0)COL.cells[COL.sel]={img:null,z:1,ox:0,oy:0}}
+    else if(k==='edit'){colEdit();return}
+    colRefresh();
+  });
+  cp.addEventListener('input',function(e){
+    var t=e.target,k=t.getAttribute('data-ck');if(!k)return;
+    var v=t.type==='color'?t.value:Number(t.value);
+    if(k==='gap')COL.gap=v;else if(k==='rad')COL.rad=v;else if(k==='bgc'){COL.bg=v}
+    else if(k==='zoom'&&COL.sel>=0)COL.cells[COL.sel].z=v;
+    var lab=$('#cv_'+k);if(lab)lab.textContent=Math.round(v*Number(t.getAttribute('data-m')||1)*10)/10;
+    colDraw();
+  });
+  var cv_=$('#cCv'),drag=null;
+  function hit(e){
+    var r=cv_.getBoundingClientRect(),x=(e.clientX-r.left)*cv_.width/r.width,y=(e.clientY-r.top)*cv_.height/r.height;
+    for(var i=0;i<COL.cells.length;i++){var q=colCellRect(i,cv_.width,cv_.height);if(x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h)return {i:i,x:x,y:y}}
+    return null;
+  }
+  cv_.addEventListener('pointerdown',function(e){
+    var h=hit(e);try{cv_.setPointerCapture(e.pointerId)}catch(err){}
+    if(!h){COL.sel=-1;drag=null;colRefresh();return}
+    var wasSel=COL.sel===h.i,c=COL.cells[h.i];COL.sel=h.i;
+    drag={i:h.i,x:h.x,y:h.y,moved:false,empty:!c.img,wasSel:wasSel};
+    colRefresh();
+  });
+  cv_.addEventListener('pointermove',function(e){
+    if(!drag)return;
+    var c=COL.cells[drag.i];if(!c||!c.img)return;
+    var h2=(function(){var r=cv_.getBoundingClientRect();return {x:(e.clientX-r.left)*cv_.width/r.width,y:(e.clientY-r.top)*cv_.height/r.height}})();
+    var q=colCellRect(drag.i,cv_.width,cv_.height),iw=c.img.width,ih=c.img.height,s=Math.max(q.w/iw,q.h/ih)*c.z,mx=(iw*s-q.w)/2,my=(ih*s-q.h)/2;
+    var dx=h2.x-drag.x,dy=h2.y-drag.y;
+    if(Math.abs(dx)+Math.abs(dy)>3)drag.moved=true;
+    if(mx>0.5)c.ox=clamp(c.ox-dx/mx,-1,1);
+    if(my>0.5)c.oy=clamp(c.oy-dy/my,-1,1);
+    drag.x=h2.x;drag.y=h2.y;colDraw();
+  });
+  function end(){
+    if(!drag)return;var d=drag;drag=null;
+    if(d.empty&&!d.moved){COL.pickIdx=d.i;$('#fileCol').value='';$('#fileCol').click()}
+  }
+  cv_.addEventListener('pointerup',end);cv_.addEventListener('pointercancel',function(){drag=null});
+  window.addEventListener('resize',colDraw);
+  colPanel();requestAnimationFrame(colDraw);
+}
+function closeCollage(){
+  var d=$('#col');if(d)d.remove();COL.open=false;COL.sel=-1;
+  window.removeEventListener('resize',colDraw);
+  if(doc.base)scheduleRender();
+}
+function colFilled(){return COL.cells.some(function(c){return c.img})}
+async function colEdit(){
+  if(!colFilled()){toast('Hãy thêm ít nhất một ảnh');return}
+  if(doc.base&&HI>0&&!(await askConfirm('Chỉnh tiếp','Ảnh đang sửa sẽ bị thay bằng ảnh ghép. Hãy lưu trước nếu cần.','Thay bằng ảnh ghép',false)))return;
+  busy(true,'Đang ghép ảnh…');await nextFrame();
+  try{var s=colOutSize(),c=colRender(s[0],s[1],false);closeCollage();openCanvas(c)}catch(e){toast('Ghép ảnh lỗi: hết bộ nhớ')}
+  busy(false);
+}
+async function colSave(){
+  if(!colFilled()){toast('Hãy thêm ít nhất một ảnh');return}
+  busy(true,'Đang xuất ảnh…');await nextFrame();
+  try{
+    var s=colOutSize(),c=colRender(s[0],s[1],false),png=LOCAL.fmt==='png',type=png?'image/png':'image/jpeg';
+    var blob=await toBlob(c,type,LOCAL.q);if(!blob)throw new Error('toBlob');
+    var d=new Date(),pad=function(n){return (n<10?'0':'')+n};
+    var name='ghep-'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'-'+pad(d.getHours())+pad(d.getMinutes())+pad(d.getSeconds())+(png?'.png':'.jpg');
+    var file=new File([blob],name,{type:type});
+    busy(false);
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      try{await navigator.share({files:[file]});return}catch(e){if(e&&e.name==='AbortError')return}
+    }
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},4000);toast('Đã tải ảnh về máy');
+  }catch(e){busy(false);toast('Xuất ảnh lỗi: ảnh quá lớn hoặc hết bộ nhớ')}
+}
+$('#bCollage').addEventListener('click',openCollage);
 </script>
 </body>
 </html>
